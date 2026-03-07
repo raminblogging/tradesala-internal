@@ -295,7 +295,7 @@
           <div class="post-author-name">${post.author_name}</div>
           <div class="post-meta">${post.department || 'Employee'} · ${Utils.timeAgo(post.created_at)}</div>
         </div>
-        ${post.author_id == user?.id ? `
+        ${(post.author_id == user?.id || user?.role === 'admin') ? `
           <div style="margin-left:auto" class="dropdown-wrap">
             <button class="btn btn-ghost btn-sm" onclick="toggleDropdown('dd-${post.id}')">···</button>
             <div class="dropdown-menu" id="dd-${post.id}">
