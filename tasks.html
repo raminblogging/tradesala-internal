@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .page-header h1 { font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:-0.04em; }
+    .tasks-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+    .tasks-toolbar .form-input { min-width:220px; }
+    .view-toggle { display:flex; background:var(--bg-secondary); border-radius:var(--radius-sm); padding:3px; gap:2px; }
+    .view-btn { padding:6px 12px; border-radius:calc(var(--radius-sm) - 2px); font-size:12px; font-weight:600; cursor:pointer; transition:var(--transition); border:none; background:none; font-family:var(--font-body); color:var(--text-muted); display:flex; align-items:center; gap:5px; }
+    .view-btn.active { background:var(--bg-card); color:var(--text-primary); box-shadow:var(--shadow-sm); }
+    /* List view */
+    .task-list-item { display:grid; grid-template-columns:auto 1fr auto auto auto; align-items:center; gap:12px; padding:12px 16px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); margin-bottom:6px; transition:var(--transition); cursor:pointer; }
+    .task-list-item:hover { border-color:var(--accent); box-shadow:var(--shadow-sm); }
+    .task-checkbox { width:18px; height:18px; border:2px solid var(--border-strong); border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:var(--transition); cursor:pointer; }
+    .task-checkbox.done { background:var(--success); border-color:var(--success); }
+    .task-info-title { font-size:13.5px; font-weight:600; }
+    .task-info-meta { display:flex; gap:8px; margin-top:4px; flex-wrap:wrap; }
+    .task-assignee-tag { font-size:11px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:100px; padding:2px 8px; color:var(--text-muted); }
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); z-index:500; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-xl); width:100%; max-width:540px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-xl); }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border); }
+    .modal-title { font-family:var(--font-display); font-size:17px; font-weight:700; letter-spacing:-0.03em; }
+    .modal-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+    .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:768px){ .form-row{grid-template-columns:1fr} .task-list-item{grid-template-columns:auto 1fr auto} }
+    /* Activity log */
+    .activity-log-item { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+    .activity-log-item:last-child { border-bottom:none; }
+    .activity-log-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; margin-top:4px; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <div>
+          <h1>Task Management</h1>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px">Assign, track, and complete work</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('createTaskModal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Task
+        </button>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="tasks-toolbar animate-in" style="animation-delay:.05s">
+        <input class="form-input" id="searchTask" placeholder="Search tasks…" oninput="filterTasks()" style="flex:1;min-width:200px;max-width:320px">
+        <select class="form-input" id="filterStatus" onchange="filterTasks()" style="width:140px">
+          <option value="">All Statuses</option>
+          <option value="todo">Todo</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="blocked">Blocked</option>
+        </select>
+        <select class="form-input" id="filterPriority" onchange="filterTasks()" style="width:130px">
+          <option value="">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="view-toggle">
+          <button class="view-btn active" id="viewList" onclick="setView('list')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            List
+          </button>
+          <button class="view-btn" id="viewKanban" onclick="setView('kanban')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="4" height="8"/></svg>
+            Board
+          </button>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div id="listView" class="animate-in" style="animation-delay:.08s">
+        <div id="taskList"><div style="text-align:center;padding:48px;color:var(--text-muted)">Loading…</div></div>
+      </div>
+
+      <!-- Kanban View -->
+      <div id="kanbanView" style="display:none" class="animate-in">
+        <div class="kanban-board" id="kanbanBoard"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal-overlay" id="createTaskModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">New Task</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('createTaskModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Task Title *</label>
+        <input type="text" class="form-input" id="taskTitle" placeholder="Describe the task…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="taskDesc" rows="3" placeholder="Additional details…" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-input" id="taskPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input type="date" class="form-input" id="taskDue">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign To</label>
+        <select class="form-input" id="taskAssignee">
+          <option value="">Select employee…</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('createTaskModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createTask()">Create Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div class="modal-overlay" id="taskDetailModal">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <div class="modal-title" id="detailTaskTitle">Task Details</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('taskDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="taskDetailBody"></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+const user = Auth.requireAuth();
+if (!user) throw new Error('Not authenticated');
+buildSidebar('tasks');
+buildTopbar('Tasks');
+
+let allTasks = [];
+let currentView = 'list';
+
+async function loadTasks() {
+  const res = await API.get('/tasks');
+  if (!res.ok) { Toast.error('Could not load tasks'); return; }
+  allTasks = res.data.tasks || [];
+  renderView();
+}
+
+async function loadEmployees() {
+  const res = await API.get('/admin/employees');
+  if (!res.ok) return;
+  const sel = document.getElementById('taskAssignee');
+  (res.data.employees || []).forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = `${e.name} (${e.employee_id})`;
+    sel.appendChild(opt);
+  });
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('listView').style.display = v === 'list' ? 'block' : 'none';
+  document.getElementById('kanbanView').style.display = v === 'kanban' ? 'block' : 'none';
+  document.getElementById('viewList').classList.toggle('active', v === 'list');
+  document.getElementById('viewKanban').classList.toggle('active', v === 'kanban');
+  renderView();
+}
+
+function getFiltered() {
+  const search = document.getElementById('searchTask').value.toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const priority = document.getElementById('filterPriority').value;
+  return allTasks.filter(t => {
+    if (search && !t.title.toLowerCase().includes(search)) return false;
+    if (status && t.status !== status) return false;
+    if (priority && t.priority !== priority) return false;
+    return true;
+  });
+}
+
+function filterTasks() { renderView(); }
+
+function renderView() {
+  if (currentView === 'list') renderList();
+  else renderKanban();
+}
+
+const statusLabel = { todo:'Todo', in_progress:'In Progress', completed:'Completed', blocked:'Blocked' };
+const priorityLabel = { low:'Low', medium:'Medium', high:'High' };
+
+function renderList() {
+  const tasks = getFiltered();
+  const el = document.getElementById('taskList');
+  if (!tasks.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><h3>No tasks found</h3><p>Create a task to get started</p></div>`;
+    return;
+  }
+  el.innerHTML = tasks.map(t => {
+    const isOverdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed';
+    return `
+    <div class="task-list-item" onclick="viewTask(${t.id})">
+      <div class="task-checkbox ${t.status === 'completed' ? 'done' : ''}" onclick="event.stopPropagation();toggleStatus(${t.id}, '${t.status}')">
+        ${t.status === 'completed' ? '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:10px;height:10px"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </div>
+      <div>
+        <div class="task-info-title ${t.status === 'completed' ? 'text-decoration:line-through' : ''}">${t.title}</div>
+        <div class="task-info-meta">
+          <span class="priority-badge priority-${t.priority}">${priorityLabel[t.priority]}</span>
+          <span class="status-badge status-${t.status === 'in_progress' ? 'inprogress' : t.status}">${statusLabel[t.status]}</span>
+          ${t.assignee_name ? `<span class="task-assignee-tag">👤 ${t.assignee_name}</span>` : ''}
+        </div>
+      </div>
+      <div class="task-due ${isOverdue ? 'overdue' : ''}">${t.due_date ? Utils.formatDate(t.due_date) : '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderKanban() {
+  const tasks = getFiltered();
+  const columns = [
+    { key:'todo', label:'Todo' },
+    { key:'in_progress', label:'In Progress' },
+    { key:'completed', label:'Completed' },
+    { key:'blocked', label:'Blocked' },
+  ];
+  document.getElementById('kanbanBoard').innerHTML = columns.map(col => {
+    const colTasks = tasks.filter(t => t.status === col.key);
+    return `
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        ${col.label}
+        <span class="kanban-col-count">${colTasks.length}</span>
+      </div>
+      ${colTasks.length ? colTasks.map(t => `
+        <div class="kanban-card" onclick="viewTask(${t.id})">
+          <div class="kanban-card-title">${t.title}</div>
+          <div class="kanban-card-meta">
+            <span class="priority-badge priority-${t.priority}">${priorityLabel[t.priority]}</span>
+            ${t.due_date ? `<span class="task-due ${new Date(t.due_date)<new Date()&&t.status!=='completed'?'overdue':''}">${Utils.formatDate(t.due_date)}</span>` : ''}
+            ${t.assignee_name ? `<span class="task-assignee-tag" style="font-size:10px">${t.assignee_name.split(' ')[0]}</span>` : ''}
+          </div>
+        </div>
+      `).join('') : `<div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:12px">Empty</div>`}
+    </div>`;
+  }).join('');
+}
+
+async function createTask() {
+  const title = document.getElementById('taskTitle').value.trim();
+  if (!title) { Toast.error('Task title is required'); return; }
+  const body = {
+    title,
+    description: document.getElementById('taskDesc').value.trim(),
+    priority: document.getElementById('taskPriority').value,
+    due_date: document.getElementById('taskDue').value || null,
+    assignee_id: document.getElementById('taskAssignee').value || null,
+  };
+  const res = await API.post('/tasks', body);
+  if (res.ok) {
+    Toast.success('Task created!');
+    closeModal('createTaskModal');
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskDesc').value = '';
+    loadTasks();
+  } else {
+    Toast.error(res.data.error || 'Failed to create task');
+  }
+}
+
+async function toggleStatus(id, current) {
+  const next = current === 'completed' ? 'todo' : current === 'todo' ? 'in_progress' : 'completed';
+  const res = await API.put('/tasks/' + id, { status: next });
+  if (res.ok) { loadTasks(); } else { Toast.error('Failed to update'); }
+}
+
+async function viewTask(id) {
+  const task = allTasks.find(t => t.id === id);
+  if (!task) return;
+  document.getElementById('detailTaskTitle').textContent = task.title;
+  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
+  document.getElementById('taskDetailBody').innerHTML = `
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(this,'tabDetails')">Details</button>
+      <button class="tab-btn" onclick="switchTab(this,'tabComments')">Comments</button>
+      <button class="tab-btn" onclick="switchTab(this,'tabActivity')">Activity</button>
+    </div>
+    <div class="tab-pane active" id="tabDetails">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="profile-field"><div class="profile-field-label">Description</div><div class="profile-field-val" style="font-weight:400;font-size:13px">${task.description || 'No description'}</div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="profile-field"><div class="profile-field-label">Priority</div><div><span class="priority-badge priority-${task.priority}">${priorityLabel[task.priority]}</span></div></div>
+          <div class="profile-field"><div class="profile-field-label">Status</div><div><span class="status-badge status-${task.status==='in_progress'?'inprogress':task.status}">${statusLabel[task.status]}</span></div></div>
+          <div class="profile-field"><div class="profile-field-label">Assigned To</div><div class="profile-field-val">${task.assignee_name || '—'}</div></div>
+          <div class="profile-field"><div class="profile-field-label">Due Date</div><div class="profile-field-val ${isOverdue?'text-danger':''}">${task.due_date ? Utils.formatDate(task.due_date) : '—'}</div></div>
+          <div class="profile-field"><div class="profile-field-label">Created</div><div class="profile-field-val">${Utils.formatDate(task.created_at)}</div></div>
+          <div class="profile-field"><div class="profile-field-label">Created By</div><div class="profile-field-val">${task.creator_name || '—'}</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${['todo','in_progress','completed','blocked'].map(s => `<button class="btn ${task.status===s?'btn-primary':'btn-ghost'} btn-sm" onclick="changeStatus(${task.id},'${s}')">${statusLabel[s]}</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane" id="tabComments">
+      <div class="comment-list" id="taskComments">Loading…</div>
+      <div class="comment-input-row">
+        <input type="text" class="form-input" id="commentInput" placeholder="Write a comment…" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="addComment(${task.id})">Post</button>
+      </div>
+    </div>
+    <div class="tab-pane" id="tabActivity">
+      <div id="taskActivity">Loading…</div>
+    </div>
+  `;
+  openModal('taskDetailModal');
+  loadTaskComments(id);
+  loadTaskActivity(id);
+}
+
+async function changeStatus(id, status) {
+  const res = await API.put('/tasks/' + id, { status });
+  if (res.ok) { closeModal('taskDetailModal'); loadTasks(); Toast.success('Status updated'); }
+}
+
+async function loadTaskComments(id) {
+  const res = await API.get('/tasks/' + id + '/comments');
+  const el = document.getElementById('taskComments');
+  if (!el) return;
+  if (!res.ok || !res.data.comments?.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">No comments yet</div>'; return; }
+  el.innerHTML = res.data.comments.map(c => `
+    <div class="comment-item">
+      <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${Utils.initials(c.author_name)}</div>
+      <div class="comment-bubble">
+        <div class="comment-author">${c.author_name}</div>
+        <div class="comment-text">${c.content}</div>
+        <div class="comment-time">${Utils.timeAgo(c.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addComment(taskId) {
+  const input = document.getElementById('commentInput');
+  const content = input.value.trim();
+  if (!content) return;
+  const res = await API.post('/tasks/' + taskId + '/comments', { content });
+  if (res.ok) { input.value = ''; loadTaskComments(taskId); } else Toast.error('Failed to post comment');
+}
+
+async function loadTaskActivity(id) {
+  const res = await API.get('/tasks/' + id + '/activity');
+  const el = document.getElementById('taskActivity');
+  if (!el) return;
+  if (!res.ok || !res.data.activity?.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">No activity yet</div>'; return; }
+  el.innerHTML = res.data.activity.map(a => `
+    <div class="activity-log-item">
+      <div class="activity-log-dot"></div>
+      <div style="flex:1">
+        <div style="font-size:12.5px">${a.description}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${a.actor_name} · ${Utils.timeAgo(a.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function switchTab(btn, paneId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId)?.classList.add('active');
+}
+
+loadTasks();
+loadEmployees();
+</script>
+</body>
+</html>

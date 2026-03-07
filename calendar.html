@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .cal-nav { display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+    .cal-nav-title { font-family:var(--font-display); font-size:20px; font-weight:700; letter-spacing:-0.04em; flex:1; }
+    .cal-legend { display:flex; gap:12px; flex-wrap:wrap; }
+    .cal-legend-item { display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; }
+    .cal-legend-dot { width:10px; height:10px; border-radius:3px; }
+    .upcoming-events { display:flex; flex-direction:column; gap:8px; }
+    .event-item { display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg-secondary); border-radius:var(--radius-sm); border-left:3px solid var(--accent); transition:var(--transition); cursor:pointer; }
+    .event-item:hover { background:var(--bg-card); box-shadow:var(--shadow-sm); }
+    .event-date-badge { text-align:center; min-width:38px; }
+    .event-date-day { font-family:var(--font-display); font-size:20px; font-weight:700; line-height:1; }
+    .event-date-mon { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); }
+    .event-title { font-size:13.5px; font-weight:600; margin-bottom:3px; }
+    .event-meta { font-size:11.5px; color:var(--text-muted); }
+    .event-type-dot { width:8px; height:8px; border-radius:50%; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); z-index:500; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-xl); width:100%; max-width:520px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-xl); }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border); }
+    .modal-title { font-family:var(--font-display); font-size:17px; font-weight:700; }
+    .modal-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+    .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:768px){ .form-row{grid-template-columns:1fr} .cal-layout{grid-template-columns:1fr !important} }
+    .cal-layout { display:grid; grid-template-columns:1fr 280px; gap:20px; align-items:start; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px" class="animate-in">
+        <div><h1 style="font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:-0.04em">Calendar</h1>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px">Events, meetings & schedules</div></div>
+        <button class="btn btn-primary" onclick="openModal('createEventModal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Event
+        </button>
+      </div>
+
+      <div class="cal-layout animate-in" style="animation-delay:.05s">
+        <!-- Calendar -->
+        <div>
+          <div class="cal-nav">
+            <button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">‹ Prev</button>
+            <div class="cal-nav-title" id="calTitle"></div>
+            <button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">Next ›</button>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div class="calendar-grid" id="calGrid"></div>
+          </div>
+          <div class="cal-legend" style="margin-top:12px">
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--accent)"></div>Company</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#4F8EF7"></div>Personal</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--warning)"></div>Holiday</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#a064ff"></div>Meeting</div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Upcoming Events</div></div>
+            <div class="upcoming-events" id="upcomingList">
+              <div style="color:var(--text-muted);font-size:13px">Loading…</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Today</div></div>
+            <div id="todayEvents"><div style="color:var(--text-muted);font-size:13px">No events today</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Create Event Modal -->
+<div class="modal-overlay" id="createEventModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">New Event</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('createEventModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Event Title *</label>
+        <input type="text" class="form-input" id="evTitle" placeholder="e.g. Team standup">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="evDesc" rows="2" style="resize:vertical" placeholder="Event details…"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input type="date" class="form-input" id="evDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time</label>
+          <input type="time" class="form-input" id="evTime">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Event Type</label>
+          <select class="form-input" id="evType">
+            <option value="company">Company-wide</option>
+            <option value="meeting">Team Meeting</option>
+            <option value="holiday">Holiday</option>
+            <option value="personal">Personal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Recurrence</label>
+          <select class="form-input" id="evRecur">
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location / Meeting Link</label>
+        <input type="text" class="form-input" id="evLocation" placeholder="Room 3A or https://meet.google.com/…">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('createEventModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createEvent()">Create Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- Event Detail Modal -->
+<div class="modal-overlay" id="eventDetailModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="evDetailTitle">Event</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('eventDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="evDetailBody"></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+const user = Auth.requireAuth();
+if (!user) throw new Error('Not authenticated');
+buildSidebar('calendar');
+buildTopbar('Calendar');
+
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth();
+let allEvents = [];
+
+// Set default date to today
+document.getElementById('evDate').value = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+async function loadEvents() {
+  const res = await API.get(`/events?year=${currentYear}&month=${currentMonth + 1}`);
+  if (res.ok) {
+    allEvents = res.data.events || [];
+    renderCalendar();
+    renderUpcoming();
+    renderToday();
+  }
+}
+
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  loadEvents();
+}
+
+function renderCalendar() {
+  const title = document.getElementById('calTitle');
+  title.textContent = new Date(currentYear, currentMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
+
+  let html = days.map(d => `<div class="calendar-day-label">${d}</div>`).join('');
+
+  // prev month filler
+  for (let i = firstDay - 1; i >= 0; i--) {
+    html += `<div class="calendar-cell other-month"><div class="cal-day-num">${daysInPrev - i}</div></div>`;
+  }
+
+  // current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const dayEvents = allEvents.filter(e => e.date === dateStr);
+    const shown = dayEvents.slice(0, 2);
+    const extra = dayEvents.length - 2;
+    html += `<div class="calendar-cell ${isToday ? 'today' : ''}" onclick="showDayEvents('${dateStr}')">
+      <div class="cal-day-num">${d}</div>
+      ${shown.map(e => `<div class="cal-event ${e.type}" title="${e.title}">${e.title}</div>`).join('')}
+      ${extra > 0 ? `<div class="cal-more">+${extra} more</div>` : ''}
+    </div>`;
+  }
+
+  // fill remaining
+  const total = firstDay + daysInMonth;
+  const remaining = total % 7 ? 7 - (total % 7) : 0;
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="calendar-cell other-month"><div class="cal-day-num">${i}</div></div>`;
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function renderUpcoming() {
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const upcoming = allEvents.filter(e => e.date >= todayStr).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 5);
+  const el = document.getElementById('upcomingList');
+  if (!upcoming.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No upcoming events</div>'; return; }
+  el.innerHTML = upcoming.map(e => {
+    const dt = new Date(e.date + 'T12:00:00');
+    const colorMap = { company:'var(--accent)', personal:'#4F8EF7', holiday:'var(--warning)', meeting:'#a064ff' };
+    return `
+    <div class="event-item" style="border-color:${colorMap[e.type]||'var(--accent)'}" onclick="viewEvent(${e.id})">
+      <div class="event-date-badge">
+        <div class="event-date-day">${dt.getDate()}</div>
+        <div class="event-date-mon">${dt.toLocaleDateString('en-IN',{month:'short'})}</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="event-title">${e.title}</div>
+        <div class="event-meta">${e.time || 'All day'} ${e.location ? '· ' + e.location : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderToday() {
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const todayEvents = allEvents.filter(e => e.date === todayStr);
+  const el = document.getElementById('todayEvents');
+  if (!todayEvents.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No events today</div>'; return; }
+  el.innerHTML = todayEvents.map(e => `
+    <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:18px">${e.type==='holiday'?'🎉':e.type==='meeting'?'👥':e.type==='personal'?'👤':'📢'}</div>
+      <div><div style="font-size:13px;font-weight:600">${e.title}</div><div style="font-size:11px;color:var(--text-muted)">${e.time||'All day'}</div></div>
+    </div>
+  `).join('');
+}
+
+function showDayEvents(dateStr) {
+  const dayEvents = allEvents.filter(e => e.date === dateStr);
+  if (!dayEvents.length) return;
+  const dt = new Date(dateStr + 'T12:00:00');
+  document.getElementById('evDetailTitle').textContent = dt.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('evDetailBody').innerHTML = dayEvents.map(e => `
+    <div style="padding:12px;background:var(--bg-secondary);border-radius:var(--radius-sm);margin-bottom:8px">
+      <div style="font-size:13.5px;font-weight:600;margin-bottom:4px">${e.title}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${e.time||'All day'} ${e.location ? '· '+e.location : ''}</div>
+      ${e.description ? `<div style="font-size:12.5px;margin-top:8px">${e.description}</div>` : ''}
+    </div>
+  `).join('');
+  openModal('eventDetailModal');
+}
+
+function viewEvent(id) {
+  const e = allEvents.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('evDetailTitle').textContent = e.title;
+  document.getElementById('evDetailBody').innerHTML = `
+    <div class="profile-field" style="margin-bottom:10px"><div class="profile-field-label">Description</div><div class="profile-field-val" style="font-weight:400">${e.description||'No description'}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="profile-field"><div class="profile-field-label">Date</div><div class="profile-field-val">${Utils.formatDate(e.date)}</div></div>
+      <div class="profile-field"><div class="profile-field-label">Time</div><div class="profile-field-val">${e.time||'All day'}</div></div>
+      <div class="profile-field"><div class="profile-field-label">Type</div><div class="profile-field-val">${e.type}</div></div>
+      <div class="profile-field"><div class="profile-field-label">Location</div><div class="profile-field-val">${e.location||'—'}</div></div>
+    </div>
+  `;
+  openModal('eventDetailModal');
+}
+
+async function createEvent() {
+  const title = document.getElementById('evTitle').value.trim();
+  const date  = document.getElementById('evDate').value;
+  if (!title || !date) { Toast.error('Title and date are required'); return; }
+  const body = {
+    title, date,
+    description: document.getElementById('evDesc').value.trim(),
+    time: document.getElementById('evTime').value || null,
+    type: document.getElementById('evType').value,
+    recurrence: document.getElementById('evRecur').value,
+    location: document.getElementById('evLocation').value.trim(),
+  };
+  const res = await API.post('/events', body);
+  if (res.ok) {
+    Toast.success('Event created!');
+    closeModal('createEventModal');
+    document.getElementById('evTitle').value = '';
+    loadEvents();
+  } else {
+    Toast.error(res.data.error || 'Failed to create event');
+  }
+}
+
+loadEvents();
+</script>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .page-header h1 { font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:-0.04em; }
+    .report-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:768px){ .report-grid{grid-template-columns:1fr} }
+    .bar-chart { display:flex; align-items:flex-end; gap:6px; height:140px; padding:10px 0 0; }
+    .bar-col { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
+    .bar-fill { width:100%; border-radius:4px 4px 0 0; transition:height .6s cubic-bezier(.4,0,.2,1); min-height:4px; }
+    .bar-label { font-size:10px; color:var(--text-muted); font-weight:600; text-align:center; }
+    .bar-val { font-size:10.5px; font-weight:700; color:var(--text-secondary); }
+    .table-simple { width:100%; border-collapse:collapse; }
+    .table-simple th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); }
+    .table-simple td { font-size:13px; padding:10px 10px; border-bottom:1px solid var(--border); }
+    .table-simple tr:last-child td { border-bottom:none; }
+    .table-simple tr:hover td { background:var(--bg-secondary); }
+    .progress-bar { height:6px; background:var(--border); border-radius:100px; overflow:hidden; margin-top:3px; }
+    .progress-fill { height:100%; border-radius:100px; background:var(--accent); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <div>
+          <h1>Reports & Analytics</h1>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px">Insights across attendance, leave, and tasks</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="form-input" id="reportMonth" style="width:140px" onchange="loadAll()">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+          <select class="form-input" id="reportYear" style="width:100px" onchange="loadAll()"></select>
+        </div>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="metric-row animate-in" style="animation-delay:.04s">
+        <div class="metric-box">
+          <div class="metric-box-val" id="kpiAttRate" style="color:var(--accent)">—</div>
+          <div class="metric-box-label">Attendance Rate</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-val" id="kpiPresent">—</div>
+          <div class="metric-box-label">Days Present</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-val" id="kpiAvgHours" style="color:#4F8EF7">—</div>
+          <div class="metric-box-label">Avg Hours/Day</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-val" id="kpiTasksDone" style="color:var(--success)">—</div>
+          <div class="metric-box-label">Tasks Completed</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-box-val" id="kpiLeaveTaken" style="color:var(--warning)">—</div>
+          <div class="metric-box-label">Leave Days Used</div>
+        </div>
+      </div>
+
+      <div class="tab-bar animate-in" style="animation-delay:.06s">
+        <button class="tab-btn active" onclick="switchTab(this,'tabAtt')">Attendance</button>
+        <button class="tab-btn" onclick="switchTab(this,'tabTask')">Tasks</button>
+        <button class="tab-btn" onclick="switchTab(this,'tabLeave')">Leave</button>
+      </div>
+
+      <!-- Attendance Tab -->
+      <div class="tab-pane active" id="tabAtt">
+        <div class="report-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Daily Attendance (this month)</div></div>
+            <div class="bar-chart" id="attBarChart">
+              <div style="color:var(--text-muted);font-size:13px;align-self:center;width:100%;text-align:center">Loading…</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Monthly Summary</div></div>
+            <div id="attSummaryTable"><div style="color:var(--text-muted);font-size:13px">Loading…</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><div class="card-title">Full Attendance Log</div></div>
+          <div style="overflow-x:auto">
+            <table class="table-simple" id="attLogTable">
+              <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Duration</th><th>Status</th></tr></thead>
+              <tbody id="attLogBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasks Tab -->
+      <div class="tab-pane" id="tabTask">
+        <div class="report-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Tasks by Status</div></div>
+            <div id="taskStatusChart" style="padding:10px 0">Loading…</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Task Priority Breakdown</div></div>
+            <div id="taskPriorityChart" style="padding:10px 0">Loading…</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><div class="card-title">Recent Tasks</div></div>
+          <div style="overflow-x:auto">
+            <table class="table-simple" id="taskTable">
+              <thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Due</th><th>Assigned</th></tr></thead>
+              <tbody id="taskTableBody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leave Tab -->
+      <div class="tab-pane" id="tabLeave">
+        <div class="report-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Leave Balance</div></div>
+            <div id="leaveBalanceViz" style="padding:10px 0">Loading…</div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Leave Requests This Year</div></div>
+            <div id="leaveRequestsChart" style="padding:10px 0">Loading…</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-header"><div class="card-title">Leave History</div></div>
+          <div style="overflow-x:auto">
+            <table class="table-simple">
+              <thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th>Reason</th></tr></thead>
+              <tbody id="leaveHistoryBody"><tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+const user = Auth.requireAuth();
+if (!user) throw new Error('Not authenticated');
+buildSidebar('reports');
+buildTopbar('Reports');
+
+// Init year selector
+const now = new Date();
+const yearSel = document.getElementById('reportYear');
+for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+  const opt = document.createElement('option');
+  opt.value = y; opt.textContent = y;
+  if (y === now.getFullYear()) opt.selected = true;
+  yearSel.appendChild(opt);
+}
+document.getElementById('reportMonth').value = now.getMonth() + 1;
+
+async function loadAll() {
+  const month = document.getElementById('reportMonth').value;
+  const year  = document.getElementById('reportYear').value;
+  await Promise.all([loadAttendance(month, year), loadTasks(), loadLeave()]);
+}
+
+async function loadAttendance(month, year) {
+  const [statsRes, logsRes] = await Promise.all([
+    API.get(`/attendance/stats?month=${month}&year=${year}`),
+    API.get(`/attendance/monthly?month=${month}&year=${year}`),
+  ]);
+
+  if (statsRes.ok) {
+    const d = statsRes.data;
+    document.getElementById('kpiAttRate').textContent = (d.attendance_rate || 0) + '%';
+    document.getElementById('kpiPresent').textContent = d.present || 0;
+    document.getElementById('kpiAvgHours').textContent = d.avg_hours ? d.avg_hours + 'h' : '—';
+    document.getElementById('attSummaryTable').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${[['Present',d.present,'var(--success)'],['Absent',d.absent,'var(--danger)'],['On Leave',d.on_leave,'var(--warning)']].map(([l,v,c]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px;font-weight:600">${l}</span>
+            <span style="font-family:var(--font-display);font-size:18px;font-weight:700;color:${c}">${v||0}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  if (logsRes.ok) {
+    const days = logsRes.data.days || [];
+    // Bar chart
+    const maxDay = Math.max(...days.map(d => d.duration_minutes || 0), 1);
+    const barColors = { present:'var(--accent)', absent:'var(--danger)', leave:'var(--warning)', holiday:'#a064ff' };
+    if (days.length) {
+      document.getElementById('attBarChart').innerHTML = days.map(d => {
+        const pct = d.duration_minutes ? Math.round((d.duration_minutes / (maxDay || 1)) * 100) : 8;
+        const color = barColors[d.status] || 'var(--border)';
+        const dm = d.date.slice(8);
+        return `<div class="bar-col">
+          <div class="bar-val">${d.duration_minutes ? Math.floor(d.duration_minutes/60)+'h' : ''}</div>
+          <div class="bar-fill" style="height:${pct}%;background:${color}"></div>
+          <div class="bar-label">${dm}</div>
+        </div>`;
+      }).join('');
+    } else {
+      document.getElementById('attBarChart').innerHTML = '<div style="color:var(--text-muted);font-size:13px;align-self:center;width:100%;text-align:center">No attendance data for this period</div>';
+    }
+
+    // Log table
+    const tbody = document.getElementById('attLogBody');
+    if (!days.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No records</td></tr>'; return; }
+    const statusBadge = s => `<span class="status-badge status-${s==='present'?'completed':s==='absent'?'blocked':s==='leave'?'inprogress':'todo'}">${s}</span>`;
+    tbody.innerHTML = days.map(d => {
+      const cin  = d.check_in  ? new Date(d.check_in).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
+      const cout = d.check_out ? new Date(d.check_out).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
+      const dur  = d.duration_minutes ? `${Math.floor(d.duration_minutes/60)}h ${d.duration_minutes%60}m` : '—';
+      return `<tr><td>${Utils.formatDate(d.date)}</td><td>${cin}</td><td>${cout}</td><td>${dur}</td><td>${statusBadge(d.status)}</td></tr>`;
+    }).join('');
+  }
+}
+
+async function loadTasks() {
+  const res = await API.get('/tasks');
+  if (!res.ok) return;
+  const tasks = res.data.tasks || [];
+  document.getElementById('kpiTasksDone').textContent = tasks.filter(t => t.status === 'completed').length;
+
+  const statusCounts = { todo:0, in_progress:0, completed:0, blocked:0 };
+  tasks.forEach(t => { if (statusCounts[t.status] !== undefined) statusCounts[t.status]++; });
+  const priCounts = { high:0, medium:0, low:0 };
+  tasks.forEach(t => { if (priCounts[t.priority] !== undefined) priCounts[t.priority]++; });
+
+  const max = Math.max(...Object.values(statusCounts), 1);
+  const statusColors = { todo:'var(--text-muted)', in_progress:'#4F8EF7', completed:'var(--success)', blocked:'var(--danger)' };
+  document.getElementById('taskStatusChart').innerHTML = Object.entries(statusCounts).map(([s,v]) => `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="font-weight:600;text-transform:capitalize">${s.replace('_',' ')}</span>
+        <span style="font-weight:700;color:${statusColors[s]}">${v}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(v/max*100)}%;background:${statusColors[s]}"></div></div>
+    </div>
+  `).join('');
+
+  const priColors = { high:'var(--danger)', medium:'var(--warning)', low:'var(--success)' };
+  const priMax = Math.max(...Object.values(priCounts), 1);
+  document.getElementById('taskPriorityChart').innerHTML = Object.entries(priCounts).map(([p,v]) => `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="font-weight:600;text-transform:capitalize">${p}</span>
+        <span style="font-weight:700;color:${priColors[p]}">${v}</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(v/priMax*100)}%;background:${priColors[p]}"></div></div>
+    </div>
+  `).join('');
+
+  const priLabel = { low:'Low', medium:'Medium', high:'High' };
+  const stLabel  = { todo:'Todo', in_progress:'In Progress', completed:'Completed', blocked:'Blocked' };
+  document.getElementById('taskTableBody').innerHTML = tasks.slice(0,20).map(t => {
+    const isOverdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed';
+    return `<tr>
+      <td style="font-weight:600">${t.title}</td>
+      <td><span class="priority-badge priority-${t.priority}">${priLabel[t.priority]}</span></td>
+      <td><span class="status-badge status-${t.status==='in_progress'?'inprogress':t.status}">${stLabel[t.status]}</span></td>
+      <td class="${isOverdue?'text-danger':''}" style="${isOverdue?'color:var(--danger);font-weight:600':''}">${t.due_date?Utils.formatDate(t.due_date):'—'}</td>
+      <td>${t.assignee_name||'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No tasks</td></tr>';
+}
+
+async function loadLeave() {
+  const [balRes, reqRes] = await Promise.all([API.get('/leave/balance'), API.get('/leave/requests')]);
+
+  if (balRes.ok) {
+    const d = balRes.data;
+    document.getElementById('kpiLeaveTaken').textContent = (d.cl_used || 0) + (d.sl_used || 0);
+    document.getElementById('leaveBalanceViz').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${[['Casual Leave (CL)', d.cl_remaining, d.cl_total, 'var(--warning)'], ['Sick Leave (SL)', d.sl_remaining, d.sl_total, 'var(--success)']].map(([l,rem,total,c]) => `
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;margin-bottom:6px">
+              <span>${l}</span><span style="color:${c}">${rem} / ${total} left</span>
+            </div>
+            <div class="progress-bar" style="height:8px">
+              <div class="progress-fill" style="width:${Math.round(rem/total*100)}%;background:${c}"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  if (reqRes.ok) {
+    const reqs = reqRes.data.requests || [];
+    const statusCounts = reqs.reduce((acc,r) => { acc[r.status]=(acc[r.status]||0)+1; return acc; }, {});
+    const total = reqs.length || 1;
+    const sc = { approved:'var(--success)', pending:'var(--warning)', rejected:'var(--danger)' };
+    document.getElementById('leaveRequestsChart').innerHTML = Object.entries(statusCounts).map(([s,v]) => `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="font-weight:600;text-transform:capitalize">${s}</span>
+          <span style="font-weight:700;color:${sc[s]||'var(--accent)'}">${v}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(v/total*100)}%;background:${sc[s]||'var(--accent)'}"></div></div>
+      </div>
+    `).join('') || '<div style="color:var(--text-muted);font-size:13px">No requests</div>';
+
+    const stBadge = s => `<span class="status-badge status-${s==='approved'?'completed':s==='rejected'?'blocked':'todo'}">${s}</span>`;
+    document.getElementById('leaveHistoryBody').innerHTML = reqs.map(r => `
+      <tr>
+        <td><span class="priority-badge priority-${r.type==='CL'?'medium':'low'}">${r.type}</span></td>
+        <td>${Utils.formatDate(r.from_date)}</td>
+        <td>${Utils.formatDate(r.to_date)}</td>
+        <td style="font-weight:700">${r.days}</td>
+        <td>${stBadge(r.status)}</td>
+        <td style="color:var(--text-muted);font-size:12px">${r.reason||'—'}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">No records</td></tr>';
+  }
+}
+
+function switchTab(btn, paneId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId)?.classList.add('active');
+}
+
+loadAll();
+</script>
+</body>
+</html>

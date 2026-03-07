@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { display: flex; min-height: 100vh; }
+    .login-left {
+      flex: 1; background: var(--bg-sidebar);
+      display: flex; flex-direction: column;
+      justify-content: space-between; padding: 40px;
+      position: relative; overflow: hidden;
+    }
+    .login-left::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 20% 20%, rgba(0,212,170,0.12) 0%, transparent 55%),
+                  radial-gradient(ellipse at 80% 80%, rgba(245,166,35,0.08) 0%, transparent 55%);
+    }
+    .login-left-grid {
+      position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .login-left-content { position: relative; z-index: 1; margin-top: auto; }
+    .login-left-quote {
+      font-family: var(--font-display); font-size: 26px; font-weight: 600;
+      color: rgba(255,255,255,0.85); line-height: 1.3; letter-spacing: -0.04em; margin-bottom: 10px;
+    }
+    .login-left-sub { font-size: 13px; color: rgba(255,255,255,0.3); line-height: 1.6; }
+    .login-left-dots { display: flex; gap: 6px; margin-bottom: 20px; }
+    .login-left-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+    .login-left-dots span:first-child { background: var(--accent); box-shadow: 0 0 10px rgba(0,212,170,.6); }
+    .login-right {
+      width: 440px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 48px 44px; background: var(--bg-primary); position: relative;
+    }
+    .login-form-inner { width: 100%; max-width: 340px; }
+    .login-logo-wrap { display: flex; align-items: center; gap: 11px; margin-bottom: 36px; }
+    .login-logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), #00a884);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #000;
+      box-shadow: 0 6px 20px rgba(0,212,170,.4);
+    }
+    .login-logo-name { font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: -0.03em; }
+    .login-logo-name span { display: block; font-size: 10px; font-weight: 400; color: var(--text-muted); font-family: var(--font-body); text-transform: uppercase; letter-spacing: .1em; }
+    .login-heading { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.04em; margin-bottom: 6px; }
+    .login-sub { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.5; }
+    .error-msg { background: var(--danger-soft); color: var(--danger); font-size: 12.5px; padding: 10px 13px; border-radius: var(--radius-sm); margin-bottom: 14px; display: none; border: 1px solid rgba(255,77,106,.2); }
+    .error-msg.show { display: block; }
+    .form-input-wrap { position: relative; }
+    .toggle-pass { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; transition: var(--transition); }
+    .toggle-pass:hover { color: var(--accent); }
+    .login-btn {
+      width: 100%; padding: 11px 20px; border-radius: var(--radius-sm);
+      background: var(--accent); color: #000; font-size: 14px; font-weight: 700;
+      font-family: var(--font-body); cursor: pointer; border: none;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: var(--transition); letter-spacing: -0.01em; margin-top: 4px;
+    }
+    .login-btn:hover { background: var(--accent-hover); box-shadow: var(--accent-glow); transform: translateY(-1px); }
+    .login-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .login-footer { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 22px; }
+    .login-footer a { color: var(--accent); font-weight: 600; }
+    .theme-toggle-fixed { position: fixed; top: 18px; right: 18px; z-index: 10; }
+    @media(max-width:768px) { .login-left { display: none !important; } .login-right { width: 100%; } }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle theme-toggle-fixed" onclick="Theme.toggle()">🌙</button>
+
+  <div class="login-left" id="loginLeft">
+    <div class="login-left-grid"></div>
+    <div class="sidebar-brand" style="position:relative;z-index:1">
+      <div class="sidebar-logo">TS</div>
+      <div class="sidebar-brand-text">TradeSala <span>Internal Portal</span></div>
+    </div>
+    <div class="login-left-content">
+      <div class="login-left-dots"><span></span><span></span><span></span></div>
+      <div class="login-left-quote">"Stay connected,<br>stay productive."</div>
+      <div class="login-left-sub">Your team's central hub for attendance,<br>leave management, and communication.</div>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-form-inner animate-in">
+      <div class="login-logo-wrap">
+        <div class="login-logo-icon">TS</div>
+        <div class="login-logo-name">TradeSala <span>Internal Portal</span></div>
+      </div>
+      <h1 class="login-heading">Welcome back</h1>
+      <p class="login-sub">Sign in with your Employee ID to access the portal.</p>
+      <div id="errorMsg" class="error-msg"></div>
+      <div class="form-group">
+        <label class="form-label">Employee ID</label>
+        <input type="text" id="empId" class="form-input" placeholder="e.g. TS001" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="form-input-wrap">
+          <input type="password" id="password" class="form-input" placeholder="Enter your password" autocomplete="current-password" style="padding-right:38px">
+          <button class="toggle-pass" type="button" onclick="togglePass()">👁</button>
+        </div>
+      </div>
+      <button class="login-btn" onclick="handleLogin()" id="loginBtn">
+        Sign In
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <div class="login-footer">Forgot your password? Contact <a href="mailto:admin@company.com">IT Admin</a></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) window.location.href = '/index.html';
+    function togglePass() { const i = document.getElementById('password'); i.type = i.type === 'password' ? 'text' : 'password'; }
+    async function handleLogin() {
+      const empId = document.getElementById('empId').value.trim();
+      const password = document.getElementById('password').value;
+      const err = document.getElementById('errorMsg');
+      const btn = document.getElementById('loginBtn');
+      err.classList.remove('show');
+      if (!empId || !password) { err.textContent = 'Please enter your Employee ID and password.'; err.classList.add('show'); return; }
+      btn.textContent = 'Signing in…'; btn.disabled = true;
+      const res = await API.post('/auth/login', { employee_id: empId, password });
+      if (res.ok && res.data.token) {
+        Auth.setSession(res.data.token, res.data.user);
+        setTimeout(() => window.location.href = '/index.html', 300);
+      } else {
+        err.textContent = res.data.error || 'Invalid Employee ID or password.';
+        err.classList.add('show');
+        btn.innerHTML = 'Sign In <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+        btn.disabled = false;
+      }
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+  </script>
+</body>
+</html>

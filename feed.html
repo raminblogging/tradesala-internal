@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Feed · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .feed-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+    .feed-column { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Compose */
+    .compose-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); }
+    .compose-row { display: flex; gap: 12px; align-items: flex-start; }
+    .compose-input {
+      flex: 1; background: var(--bg-secondary); border: 1.5px solid var(--border);
+      border-radius: var(--radius-md); padding: 11px 14px;
+      font-size: 14px; color: var(--text-primary); resize: none;
+      outline: none; transition: var(--transition); min-height: 60px;
+      font-family: var(--font-body);
+    }
+    .compose-input:focus { border-color: var(--accent); background: var(--bg-card); box-shadow: 0 0 0 3px rgba(232,80,26,.08); }
+    .compose-actions {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .compose-tools { display: flex; gap: 4px; }
+    .compose-tool {
+      width: 34px; height: 34px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 16px;
+      transition: var(--transition); cursor: pointer;
+    }
+    .compose-tool:hover { background: var(--bg-secondary); color: var(--accent); }
+    .image-preview { margin-top: 10px; position: relative; display: none; }
+    .image-preview img { border-radius: var(--radius-md); max-height: 200px; object-fit: cover; }
+    .image-preview .remove-img {
+      position: absolute; top: 8px; right: 8px;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: rgba(0,0,0,.6); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; cursor: pointer;
+    }
+
+    /* Post Card */
+    .post-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); animation: slideUp .3s cubic-bezier(.4,0,.2,1); }
+    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .post-author-name { font-weight: 600; font-size: 14px; }
+    .post-meta { font-size: 11px; color: var(--text-muted); }
+    .post-content { font-size: 14px; line-height: 1.6; color: var(--text-primary); margin-bottom: 12px; white-space: pre-wrap; word-break: break-word; }
+    .post-image { border-radius: var(--radius-md); overflow: hidden; margin-bottom: 12px; cursor: pointer; }
+    .post-image img { width: 100%; max-height: 400px; object-fit: cover; transition: transform .3s; }
+    .post-image img:hover { transform: scale(1.01); }
+    .post-actions { display: flex; gap: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .post-action-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      transition: var(--transition); cursor: pointer;
+    }
+    .post-action-btn:hover { background: var(--bg-secondary); }
+    .post-action-btn.liked { color: var(--accent); }
+    .post-action-btn svg { width: 15px; height: 15px; }
+    .post-action-btn.liked svg { fill: var(--accent); }
+
+    /* Comments */
+    .comments-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: none; }
+    .comment-item { display: flex; gap: 8px; margin-bottom: 10px; }
+    .comment-bubble { background: var(--bg-secondary); border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md); padding: 9px 12px; flex: 1; }
+    .comment-author { font-size: 11.5px; font-weight: 700; margin-bottom: 2px; }
+    .comment-text { font-size: 13px; line-height: 1.4; }
+    .comment-time { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+    .comment-input-row { display: flex; gap: 8px; margin-top: 10px; }
+    .comment-input {
+      flex: 1; background: var(--bg-secondary); border: 1.5px solid var(--border);
+      border-radius: var(--radius-md); padding: 8px 12px;
+      font-size: 13px; color: var(--text-primary);
+      outline: none; transition: var(--transition); font-family: var(--font-body);
+    }
+    .comment-input:focus { border-color: var(--accent); }
+    .comment-send { width: 34px; height: 34px; border-radius: var(--radius-sm); background: var(--accent); color: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: var(--transition); }
+    .comment-send:hover { background: var(--accent-hover); }
+
+    /* Sidebar */
+    .sidebar-widget { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); }
+    .widget-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); margin-bottom: 14px; }
+    .online-member { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    .online-name { font-size: 13px; font-weight: 500; }
+    .online-dept { font-size: 11px; color: var(--text-muted); }
+
+    .tag-chip {
+      display: inline-flex; align-items: center; padding: 4px 10px;
+      background: var(--bg-secondary); border-radius: 99px;
+      font-size: 12px; font-weight: 500; color: var(--text-secondary);
+      cursor: pointer; transition: var(--transition); margin: 3px;
+    }
+    .tag-chip:hover { background: var(--accent-soft); color: var(--accent); }
+
+    /* Image lightbox */
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 500; display: none; align-items: center; justify-content: center; }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius-md); }
+    .lightbox-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 28px; cursor: pointer; }
+
+    @media (max-width: 768px) { .feed-layout { grid-template-columns: 1fr; } .feed-sidebar { display: none; } }
+  
+    /* ── Refined typography & polish overrides ── */
+    .page-header h1 { letter-spacing: -0.04em; }
+    .card-title { font-family: var(--font-body); letter-spacing: 0.1em; }
+    [data-theme="dark"] .card { border-color: rgba(255,255,255,0.06); }
+    [data-theme="dark"] .stat-card { border-color: rgba(255,255,255,0.06); }
+    /* Teal top accent line on topbar in dark mode */
+    [data-theme="dark"] .topbar { border-top: 1.5px solid rgba(0,212,170,0.3); border-bottom-color: rgba(255,255,255,0.05); }
+    /* Stat card teal hover */
+    .stat-card:hover { border-color: rgba(0,212,170,0.2); }
+    /* Accent glow on active nav */
+    .nav-item.active { box-shadow: inset 0 0 20px rgba(0,212,170,0.04); }
+
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header animate-in">
+        <h1>Company Feed</h1>
+        <p>Stay connected with your team</p>
+      </div>
+
+      <div class="feed-layout">
+        <div class="feed-column">
+          <!-- Compose -->
+          <div class="compose-card animate-in" id="new-post">
+            <div class="compose-row">
+              <div class="avatar lg" id="composeAvatar">?</div>
+              <textarea class="compose-input" id="postContent" placeholder="Share something with the team…" rows="2"></textarea>
+            </div>
+            <div class="image-preview" id="imagePreview">
+              <img id="previewImg" src="" alt="">
+              <div class="remove-img" onclick="removeImage()">✕</div>
+            </div>
+            <div class="compose-actions">
+              <div class="compose-tools">
+                <label class="compose-tool" title="Add Image">
+                  📷
+                  <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+                </label>
+                <div class="compose-tool" title="Announcement" onclick="insertTag('📢 Announcement: ')">📢</div>
+                <div class="compose-tool" title="Birthday" onclick="insertTag('🎉 ')">🎉</div>
+              </div>
+              <button class="btn btn-primary" onclick="submitPost()" id="postBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Post
+              </button>
+            </div>
+          </div>
+
+          <!-- Posts Feed -->
+          <div id="postsContainer">
+            <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading feed…</div>
+          </div>
+
+          <div id="loadMoreWrap" style="text-align:center;display:none">
+            <button class="btn btn-secondary" onclick="loadMorePosts()">Load More</button>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="feed-sidebar" style="display:flex;flex-direction:column;gap:16px">
+          <div class="sidebar-widget animate-in" style="animation-delay:.1s">
+            <div class="widget-title">Online Now</div>
+            <div id="onlineMembers">
+              <div style="font-size:13px;color:var(--text-muted)">Loading…</div>
+            </div>
+          </div>
+
+          <div class="sidebar-widget animate-in" style="animation-delay:.15s">
+            <div class="widget-title">Quick Post Tags</div>
+            <div>
+              <span class="tag-chip" onclick="insertTag('#announcement ')">📢 announcement</span>
+              <span class="tag-chip" onclick="insertTag('#teamupdate ')">👥 teamupdate</span>
+              <span class="tag-chip" onclick="insertTag('#celebration ')">🎉 celebration</span>
+              <span class="tag-chip" onclick="insertTag('#reminder ')">🔔 reminder</span>
+              <span class="tag-chip" onclick="insertTag('#workfromhome ')">🏠 wfh</span>
+            </div>
+          </div>
+
+          <div class="sidebar-widget animate-in" style="animation-delay:.2s">
+            <div class="widget-title">Recent Activity</div>
+            <div id="feedStats" style="font-size:13px;color:var(--text-secondary)">
+              Loading stats…
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close">✕</span>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  const user = Auth.requireAuth();
+  let postsOffset = 0;
+  let selectedImageBase64 = null;
+
+  if (user) {
+    buildSidebar('feed');
+    buildTopbar('Company Feed');
+    document.getElementById('composeAvatar').textContent = Utils.initials(user.name);
+    loadPosts();
+    loadOnlineMembers();
+    loadFeedStats();
+  }
+
+  function insertTag(tag) {
+    const ta = document.getElementById('postContent');
+    ta.value += tag;
+    ta.focus();
+  }
+
+  function handleImageSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { Toast.error('Image must be under 5MB'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      selectedImageBase64 = e.target.result;
+      document.getElementById('previewImg').src = selectedImageBase64;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    selectedImageBase64 = null;
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('imageInput').value = '';
+  }
+
+  async function submitPost() {
+    const content = document.getElementById('postContent').value.trim();
+    if (!content && !selectedImageBase64) { Toast.error('Write something to post'); return; }
+
+    const btn = document.getElementById('postBtn');
+    btn.disabled = true; btn.textContent = 'Posting…';
+
+    const res = await API.post('/feed/posts', { content, image: selectedImageBase64 });
+    if (res.ok) {
+      Toast.success('Post shared!');
+      document.getElementById('postContent').value = '';
+      removeImage();
+      postsOffset = 0;
+      loadPosts(true);
+    } else {
+      Toast.error(res.data.error || 'Could not post');
+    }
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Post`;
+  }
+
+  async function loadPosts(reset = false) {
+    if (reset) postsOffset = 0;
+    const res = await API.get(`/feed/posts?offset=${postsOffset}&limit=10`);
+    const container = document.getElementById('postsContainer');
+
+    if (res.ok && res.data.posts?.length) {
+      const html = res.data.posts.map(post => renderPost(post)).join('');
+      if (reset || postsOffset === 0) container.innerHTML = html;
+      else container.insertAdjacentHTML('beforeend', html);
+      postsOffset += res.data.posts.length;
+      document.getElementById('loadMoreWrap').style.display = res.data.has_more ? 'block' : 'none';
+    } else if (postsOffset === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">💬</div><h3>No posts yet</h3><p>Be the first to share something with the team!</p></div>`;
+    }
+  }
+
+  function renderPost(post) {
+    const initials = Utils.initials(post.author_name);
+    const isLiked = post.user_liked;
+    return `
+    <div class="post-card" id="post-${post.id}">
+      <div class="post-header">
+        <div class="avatar" style="background:linear-gradient(135deg,hsl(${hashCode(post.author_name) % 360},65%,55%),hsl(${(hashCode(post.author_name)+120) % 360},65%,45%))">${initials}</div>
+        <div>
+          <div class="post-author-name">${post.author_name}</div>
+          <div class="post-meta">${post.department || 'Employee'} · ${Utils.timeAgo(post.created_at)}</div>
+        </div>
+        ${post.author_id == user?.id ? `
+          <div style="margin-left:auto" class="dropdown-wrap">
+            <button class="btn btn-ghost btn-sm" onclick="toggleDropdown('dd-${post.id}')">···</button>
+            <div class="dropdown-menu" id="dd-${post.id}">
+              <div class="dropdown-item danger" onclick="deletePost('${post.id}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                Delete Post
+              </div>
+            </div>
+          </div>` : ''}
+      </div>
+      ${post.content ? `<div class="post-content">${escapeHtml(post.content)}</div>` : ''}
+      ${post.image_url ? `<div class="post-image" onclick="openLightbox('${post.image_url}')"><img src="${post.image_url}" alt="Post image" loading="lazy"></div>` : ''}
+      <div class="post-actions">
+        <div class="post-action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}', this)" id="like-btn-${post.id}">
+          <svg viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span id="like-count-${post.id}">${post.likes_count || 0}</span>
+        </div>
+        <div class="post-action-btn" onclick="toggleComments('${post.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span id="comment-count-${post.id}">${post.comments_count || 0}</span>
+        </div>
+      </div>
+      <div class="comments-section" id="comments-${post.id}">
+        <div id="comments-list-${post.id}"></div>
+        <div class="comment-input-row">
+          <div class="avatar" style="width:28px;height:28px;font-size:10px">${initials}</div>
+          <input type="text" class="comment-input" id="comment-input-${post.id}" placeholder="Write a comment…" onkeydown="if(event.key==='Enter')postComment('${post.id}')">
+          <div class="comment-send" onclick="postComment('${post.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  async function toggleLike(postId, btnEl) {
+    const isLiked = btnEl.classList.contains('liked');
+    const countEl = document.getElementById(`like-count-${postId}`);
+    const current = parseInt(countEl.textContent) || 0;
+
+    btnEl.classList.toggle('liked');
+    countEl.textContent = isLiked ? current - 1 : current + 1;
+    const svgPath = btnEl.querySelector('svg');
+    svgPath.setAttribute('fill', isLiked ? 'none' : 'currentColor');
+
+    await API.post(`/feed/posts/${postId}/like`, { liked: !isLiked });
+  }
+
+  async function toggleComments(postId) {
+    const section = document.getElementById(`comments-${postId}`);
+    const isOpen = section.style.display === 'block';
+    section.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) loadComments(postId);
+  }
+
+  async function loadComments(postId) {
+    const res = await API.get(`/feed/posts/${postId}/comments`);
+    const list = document.getElementById(`comments-list-${postId}`);
+    if (res.ok && res.data.comments?.length) {
+      list.innerHTML = res.data.comments.map(c => `
+        <div class="comment-item">
+          <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${Utils.initials(c.author_name)}</div>
+          <div class="comment-bubble">
+            <div class="comment-author">${c.author_name}</div>
+            <div class="comment-text">${escapeHtml(c.content)}</div>
+            <div class="comment-time">${Utils.timeAgo(c.created_at)}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      list.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:4px 0 8px">No comments yet. Be the first!</div>`;
+    }
+  }
+
+  async function postComment(postId) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    const content = input.value.trim();
+    if (!content) return;
+    const res = await API.post(`/feed/posts/${postId}/comments`, { content });
+    if (res.ok) {
+      input.value = '';
+      const countEl = document.getElementById(`comment-count-${postId}`);
+      countEl.textContent = parseInt(countEl.textContent || 0) + 1;
+      loadComments(postId);
+    } else {
+      Toast.error(res.data.error || 'Could not post comment');
+    }
+  }
+
+  async function deletePost(postId) {
+    if (!confirm('Delete this post?')) return;
+    const res = await API.delete(`/feed/posts/${postId}`);
+    if (res.ok) {
+      document.getElementById(`post-${postId}`)?.remove();
+      Toast.success('Post deleted');
+    }
+  }
+
+  async function loadOnlineMembers() {
+    const res = await API.get('/employees/online');
+    const container = document.getElementById('onlineMembers');
+    if (res.ok && res.data.members?.length) {
+      container.innerHTML = res.data.members.slice(0, 8).map(m => `
+        <div class="online-member">
+          <div class="avatar" style="width:28px;height:28px;font-size:10px">${Utils.initials(m.name)}</div>
+          <div class="online-dot"></div>
+          <div>
+            <div class="online-name">${m.name}</div>
+            <div class="online-dept">${m.department || 'Staff'}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">No one online right now</div>`;
+    }
+  }
+
+  async function loadFeedStats() {
+    const res = await API.get('/feed/stats');
+    if (res.ok) {
+      const d = res.data;
+      document.getElementById('feedStats').innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between"><span>Posts today</span><strong>${d.posts_today || 0}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>Total posts</span><strong>${d.total_posts || 0}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>Active members</span><strong>${d.active_members || 0}</strong></div>
+        </div>`;
+    }
+  }
+
+  function loadMorePosts() { loadPosts(false); }
+
+  function toggleDropdown(id) {
+    document.querySelectorAll('.dropdown-menu.open').forEach(d => { if (d.id !== id) d.classList.remove('open'); });
+    document.getElementById(id)?.classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown-wrap')) {
+      document.querySelectorAll('.dropdown-menu.open').forEach(d => d.classList.remove('open'));
+    }
+  });
+
+  function openLightbox(url) {
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightbox').classList.add('open');
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+  }
+
+  function hashCode(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+</script>
+</body>
+</html>

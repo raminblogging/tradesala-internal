@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .checkin-card {
+      background: linear-gradient(135deg, #080B12 0%, #081e2e 100%);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 20px;
+    }
+    .checkin-card .clock-display {
+      font-family: var(--font-display);
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    .checkin-card .date-display {
+      font-size: 13px;
+      color: rgba(255,255,255,.5);
+      margin-top: 4px;
+    }
+    .checkin-status {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: rgba(255,255,255,.7);
+      margin-top: 10px;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.in { background: #1CB87E; box-shadow: 0 0 8px #1CB87E; animation: pulse 2s infinite; }
+    .status-dot.out { background: #888; }
+    .checkin-actions { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+    .big-checkin-btn {
+      padding: 14px 28px;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font-display);
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .big-checkin-btn.in { background: var(--accent); color: #000; }
+    .big-checkin-btn.in:hover { background: #178a5e; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(28,184,126,.4); }
+    .big-checkin-btn.out { background: var(--danger); color: white; }
+    .big-checkin-btn.out:hover { background: #c01f15; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,40,26,.4); }
+    .big-checkin-btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+    .today-times { display: flex; gap: 20px; }
+    .time-badge {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      text-align: center;
+    }
+    .time-badge-val { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+    .time-badge-label { font-size: 10px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .06em; }
+
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .cal-day-label {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 4px 0;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .cal-day {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      position: relative;
+      cursor: default;
+    }
+    .cal-day.present { background: var(--success-soft); color: var(--success); font-weight: 700; }
+    .cal-day.absent { background: var(--danger-soft); color: var(--danger); }
+    .cal-day.leave { background: var(--warning-soft); color: var(--warning); }
+    .cal-day.weekend { color: var(--text-muted); opacity: .5; }
+    .cal-day.today { outline: 2px solid var(--accent); outline-offset: -2px; font-weight: 700; }
+    .cal-day.empty { background: transparent; }
+
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+
+    .log-row-time { font-family: var(--font-display); font-weight: 600; font-size: 13px; }
+    .duration-chip {
+      display: inline-flex; align-items: center;
+      background: var(--accent-2-soft); color: var(--accent-2);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 99px;
+    }
+    .filter-bar {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+  
+    /* ── Refined typography & polish overrides ── */
+    .page-header h1 { letter-spacing: -0.04em; }
+    .card-title { font-family: var(--font-body); letter-spacing: 0.1em; }
+    [data-theme="dark"] .card { border-color: rgba(255,255,255,0.06); }
+    [data-theme="dark"] .stat-card { border-color: rgba(255,255,255,0.06); }
+    /* Teal top accent line on topbar in dark mode */
+    [data-theme="dark"] .topbar { border-top: 1.5px solid rgba(0,212,170,0.3); border-bottom-color: rgba(255,255,255,0.05); }
+    /* Stat card teal hover */
+    .stat-card:hover { border-color: rgba(0,212,170,0.2); }
+    /* Accent glow on active nav */
+    .nav-item.active { box-shadow: inset 0 0 20px rgba(0,212,170,0.04); }
+
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header animate-in">
+        <h1>Attendance</h1>
+        <p>Track your daily check-ins and monthly attendance overview</p>
+      </div>
+
+      <!-- Check In Card -->
+      <div class="checkin-card animate-in" style="animation-delay:.05s">
+        <div>
+          <div class="clock-display" id="liveClock">--:--:--</div>
+          <div class="date-display" id="liveDate"></div>
+          <div class="checkin-status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Loading status…</span>
+          </div>
+          <div class="today-times" id="todayTimes" style="margin-top:14px;display:none">
+            <div class="time-badge">
+              <div class="time-badge-val" id="timeIn">—</div>
+              <div class="time-badge-label">Check In</div>
+            </div>
+            <div class="time-badge" id="timeOutBadge" style="display:none">
+              <div class="time-badge-val" id="timeOut">—</div>
+              <div class="time-badge-label">Check Out</div>
+            </div>
+          </div>
+        </div>
+        <div class="checkin-actions">
+          <button class="big-checkin-btn in" id="checkinBtn" onclick="handleCheckin()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Check In
+          </button>
+          <button class="big-checkin-btn out" id="checkoutBtn" onclick="handleCheckout()" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Check Out
+          </button>
+        </div>
+      </div>
+
+      <div class="grid-2 animate-in" style="animation-delay:.1s">
+        <!-- Calendar -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title" id="calMonthLabel">Monthly View</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">‹</button>
+              <button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">›</button>
+            </div>
+          </div>
+          <div id="calendarGrid"></div>
+          <div style="display:flex;gap:12px;margin-top:14px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted)">
+              <div style="width:10px;height:10px;border-radius:3px;background:var(--success-soft)"></div> Present
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted)">
+              <div style="width:10px;height:10px;border-radius:3px;background:var(--danger-soft)"></div> Absent
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted)">
+              <div style="width:10px;height:10px;border-radius:3px;background:var(--warning-soft)"></div> Leave
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="stat-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0">
+            <div class="stat-card">
+              <div class="stat-icon green">✅</div>
+              <div class="stat-value" id="statP">—</div>
+              <div class="stat-label">Present Days</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon orange">❌</div>
+              <div class="stat-value" id="statA">—</div>
+              <div class="stat-label">Absent Days</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon yellow">🏖️</div>
+              <div class="stat-value" id="statL">—</div>
+              <div class="stat-label">Leave Days</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon blue">⏱️</div>
+              <div class="stat-value" id="statH">—</div>
+              <div class="stat-label">Avg. Hours</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Attendance Rate</div></div>
+            <div style="margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+                <span>This Month</span>
+                <span id="attRatePct" style="font-weight:700;color:var(--success)">—</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="attRateBar" style="width:0%;background:var(--success)"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Table -->
+      <div class="card animate-in" style="animation-delay:.15s;margin-top:20px">
+        <div class="card-header">
+          <div class="card-title">Attendance Log</div>
+        </div>
+        <div class="filter-bar">
+          <select class="form-select" style="width:180px" id="logFilter" onchange="loadLogs()">
+            <option value="current_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="last_30">Last 30 Days</option>
+          </select>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  Auth.requireAuth();
+  buildSidebar('attendance');
+  buildTopbar('Attendance');
+
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
+  let attendanceData = [];
+
+  // Live clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    document.getElementById('liveDate').textContent = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  async function loadTodayStatus() {
+    const res = await API.get('/attendance/today');
+    if (res.ok) {
+      const d = res.data;
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      if (d.checked_in && !d.checked_out) {
+        dot.className = 'status-dot in';
+        txt.textContent = `Checked in at ${Utils.formatTime(d.check_in_time)}`;
+        document.getElementById('checkinBtn').style.display = 'none';
+        document.getElementById('checkoutBtn').style.display = 'flex';
+        document.getElementById('todayTimes').style.display = 'flex';
+        document.getElementById('timeIn').textContent = Utils.formatTime(d.check_in_time);
+      } else if (d.checked_out) {
+        dot.className = 'status-dot out';
+        txt.textContent = 'Checked out — have a great day!';
+        document.getElementById('checkinBtn').style.display = 'none';
+        document.getElementById('checkoutBtn').style.display = 'none';
+        document.getElementById('todayTimes').style.display = 'flex';
+        document.getElementById('timeIn').textContent = Utils.formatTime(d.check_in_time);
+        document.getElementById('timeOutBadge').style.display = 'block';
+        document.getElementById('timeOut').textContent = Utils.formatTime(d.check_out_time);
+      } else {
+        dot.className = 'status-dot out';
+        txt.textContent = 'Not checked in yet';
+      }
+    }
+  }
+
+  async function handleCheckin() {
+    const btn = document.getElementById('checkinBtn');
+    btn.disabled = true;
+    const res = await API.post('/attendance/checkin', {});
+    if (res.ok) {
+      Toast.success('Checked in at ' + Utils.formatTime(res.data.time));
+      loadTodayStatus(); loadCalendar(); loadStats();
+    } else {
+      Toast.error(res.data.error || 'Check-in failed'); btn.disabled = false;
+    }
+  }
+
+  async function handleCheckout() {
+    const btn = document.getElementById('checkoutBtn');
+    btn.disabled = true;
+    const res = await API.post('/attendance/checkout', {});
+    if (res.ok) {
+      Toast.success('Checked out. Total: ' + res.data.duration);
+      loadTodayStatus(); loadCalendar(); loadStats();
+    } else {
+      Toast.error(res.data.error || 'Check-out failed'); btn.disabled = false;
+    }
+  }
+
+  async function loadStats() {
+    const res = await API.get(`/attendance/stats?month=${currentMonth+1}&year=${currentYear}`);
+    if (res.ok) {
+      const d = res.data;
+      document.getElementById('statP').textContent = d.present ?? '—';
+      document.getElementById('statA').textContent = d.absent ?? '—';
+      document.getElementById('statL').textContent = d.on_leave ?? '—';
+      document.getElementById('statH').textContent = d.avg_hours ? d.avg_hours + 'h' : '—';
+      const pct = d.attendance_rate ?? 0;
+      document.getElementById('attRatePct').textContent = pct + '%';
+      document.getElementById('attRateBar').style.width = pct + '%';
+    }
+  }
+
+  async function loadCalendar() {
+    const res = await API.get(`/attendance/monthly?month=${currentMonth+1}&year=${currentYear}`);
+    attendanceData = res.ok ? res.data.days || [] : [];
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('calMonthLabel').textContent = monthNames[currentMonth] + ' ' + currentYear;
+    const grid = document.getElementById('calendarGrid');
+    const today = new Date();
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+    let html = '<div class="month-grid">';
+    days.forEach(d => html += `<div class="cal-day-label">${d}</div>`);
+    for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const rec = attendanceData.find(r => r.date === dateStr);
+      const dow = new Date(currentYear, currentMonth, d).getDay();
+      const isToday = d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+      const isWeekend = dow === 0 || dow === 6;
+      let cls = 'cal-day';
+      if (isToday) cls += ' today';
+      if (rec?.status === 'present') cls += ' present';
+      else if (rec?.status === 'absent') cls += ' absent';
+      else if (rec?.status === 'leave') cls += ' leave';
+      else if (isWeekend) cls += ' weekend';
+      html += `<div class="${cls}" title="${rec ? `In: ${Utils.formatTime(rec.check_in)} | Out: ${Utils.formatTime(rec.check_out)}` : ''}">${d}</div>`;
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+  }
+
+  function changeMonth(dir) {
+    currentMonth += dir;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    loadCalendar(); loadStats();
+  }
+
+  async function loadLogs() {
+    const filter = document.getElementById('logFilter').value;
+    const res = await API.get(`/attendance/logs?filter=${filter}`);
+    const tbody = document.getElementById('logTableBody');
+    if (res.ok && res.data.logs?.length) {
+      tbody.innerHTML = res.data.logs.map(l => `
+        <tr>
+          <td>${Utils.formatDate(l.date)}</td>
+          <td class="log-row-time">${l.check_in ? Utils.formatTime(l.check_in) : '—'}</td>
+          <td class="log-row-time">${l.check_out ? Utils.formatTime(l.check_out) : '—'}</td>
+          <td>${l.duration ? `<span class="duration-chip">${l.duration}</span>` : '—'}</td>
+          <td><span class="badge badge-${l.status === 'present' ? 'success' : l.status === 'leave' ? 'warning' : 'danger'}">${l.status}</span></td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No records found</td></tr>`;
+    }
+  }
+
+  loadTodayStatus();
+  loadCalendar();
+  loadStats();
+  loadLogs();
+</script>
+</body>
+</html>

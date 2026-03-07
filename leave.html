@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leave · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .leave-balance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .leave-type-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .leave-type-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .leave-type-name { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+    .leave-type-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .leave-used { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .leave-available { font-family: var(--font-display); font-size: 32px; font-weight: 700; line-height: 1; }
+    .leave-total { font-size: 12px; color: var(--text-muted); }
+
+    .apply-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .date-range { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .leave-req-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .leave-req-item:last-child { border-bottom: none; }
+    .leave-req-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .leave-req-type { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; }
+    .leave-req-dates { font-size: 12px; color: var(--text-secondary); }
+    .leave-req-days { font-family: var(--font-display); font-weight: 700; font-size: 15px; text-align: right; }
+    .leave-req-days-label { font-size: 10px; color: var(--text-muted); }
+    .leave-req-reason { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .tabs { display: flex; gap: 2px; background: var(--bg-secondary); padding: 4px; border-radius: var(--radius-md); margin-bottom: 20px; width: fit-content; }
+    .tab {
+      padding: 7px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .tab.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+  
+    /* ── Refined typography & polish overrides ── */
+    .page-header h1 { letter-spacing: -0.04em; }
+    .card-title { font-family: var(--font-body); letter-spacing: 0.1em; }
+    [data-theme="dark"] .card { border-color: rgba(255,255,255,0.06); }
+    [data-theme="dark"] .stat-card { border-color: rgba(255,255,255,0.06); }
+    /* Teal top accent line on topbar in dark mode */
+    [data-theme="dark"] .topbar { border-top: 1.5px solid rgba(0,212,170,0.3); border-bottom-color: rgba(255,255,255,0.05); }
+    /* Stat card teal hover */
+    .stat-card:hover { border-color: rgba(0,212,170,0.2); }
+    /* Accent glow on active nav */
+    .nav-item.active { box-shadow: inset 0 0 20px rgba(0,212,170,0.04); }
+
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+      <div class="page-header animate-in">
+        <h1>Leave Management</h1>
+        <p>Apply for leave, track your balance and request history</p>
+      </div>
+
+      <!-- Leave Balance Cards -->
+      <div class="leave-balance-grid animate-in" id="leaveBalanceGrid">
+        <div class="leave-type-card">
+          <div class="leave-type-header">
+            <div class="leave-type-name">Casual Leave</div>
+            <div class="leave-type-icon" style="background:var(--accent-2-soft)">🏖️</div>
+          </div>
+          <div class="leave-available" id="clRemain">—</div>
+          <div class="leave-total" id="clTotal">of — days</div>
+          <div class="leave-used" id="clUsed">— used this year</div>
+          <div class="progress-bar" style="margin-top:12px">
+            <div class="progress-fill" id="clBar" style="width:0%;background:var(--accent)"></div>
+          </div>
+        </div>
+        <div class="leave-type-card">
+          <div class="leave-type-header">
+            <div class="leave-type-name">Sick Leave</div>
+            <div class="leave-type-icon" style="background:var(--success-soft)">🏥</div>
+          </div>
+          <div class="leave-available" id="slRemain">—</div>
+          <div class="leave-total" id="slTotal">of — days</div>
+          <div class="leave-used" id="slUsed">— used this year</div>
+          <div class="progress-bar" style="margin-top:12px">
+            <div class="progress-fill" id="slBar" style="width:0%;background:var(--success)"></div>
+          </div>
+        </div>
+        <div class="leave-type-card">
+          <div class="leave-type-header">
+            <div class="leave-type-name">Pending</div>
+            <div class="leave-type-icon" style="background:var(--warning-soft)">⏳</div>
+          </div>
+          <div class="leave-available" style="color:var(--warning)" id="pendingLeave">—</div>
+          <div class="leave-total">requests pending</div>
+          <div class="leave-used">awaiting approval</div>
+        </div>
+      </div>
+
+      <div class="apply-section animate-in" style="animation-delay:.05s">
+        <!-- Apply Form -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Apply for Leave</div></div>
+          <div class="form-group">
+            <label class="form-label">Leave Type</label>
+            <select class="form-select" id="leaveType">
+              <option value="CL">Casual Leave (CL)</option>
+              <option value="SL">Sick Leave (SL)</option>
+            </select>
+          </div>
+          <div class="date-range">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">From Date</label>
+              <input type="date" class="form-input" id="fromDate">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">To Date</label>
+              <input type="date" class="form-input" id="toDate">
+            </div>
+          </div>
+          <div style="margin:10px 0 14px;font-size:12px;color:var(--text-muted)" id="daysPreview"></div>
+          <div class="form-group">
+            <label class="form-label">Reason</label>
+            <textarea class="form-textarea" id="leaveReason" placeholder="Briefly describe the reason for your leave…"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="applyLeave()" id="applyBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Submit Request
+          </button>
+        </div>
+
+        <!-- Right: Recent requests -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">Leave History</div></div>
+          <div class="tabs">
+            <div class="tab active" onclick="filterRequests('all', this)">All</div>
+            <div class="tab" onclick="filterRequests('pending', this)">Pending</div>
+            <div class="tab" onclick="filterRequests('approved', this)">Approved</div>
+          </div>
+          <div id="leaveHistory">
+            <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel Confirm Modal -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-title">Cancel Leave Request?</div>
+    <div class="modal-subtitle">This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('cancelModal')">Keep It</button>
+      <button class="btn btn-danger" onclick="confirmCancel()">Yes, Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  Auth.requireAuth();
+  buildSidebar('leave');
+  buildTopbar('Leave Management');
+
+  let allRequests = [];
+  let cancelTargetId = null;
+
+  // Date preview
+  ['fromDate', 'toDate'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateDaysPreview);
+  });
+  function updateDaysPreview() {
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    const preview = document.getElementById('daysPreview');
+    if (from && to) {
+      const diff = Math.ceil((new Date(to) - new Date(from)) / (1000*60*60*24)) + 1;
+      if (diff <= 0) { preview.textContent = '⚠️ End date must be after start date'; preview.style.color = 'var(--danger)'; }
+      else { preview.textContent = `📅 ${diff} day${diff > 1 ? 's' : ''} selected`; preview.style.color = 'var(--text-secondary)'; }
+    }
+  }
+  // Set min date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('fromDate').min = today;
+  document.getElementById('toDate').min = today;
+
+  async function loadBalance() {
+    const res = await API.get('/leave/balance');
+    if (res.ok) {
+      const d = res.data;
+      document.getElementById('clRemain').textContent = d.cl_remaining ?? '—';
+      document.getElementById('clTotal').textContent = `of ${d.cl_total ?? 12} days`;
+      document.getElementById('clUsed').textContent = `${d.cl_used ?? 0} used this year`;
+      document.getElementById('clBar').style.width = `${100 - ((d.cl_remaining / d.cl_total) * 100)}%`;
+      document.getElementById('slRemain').textContent = d.sl_remaining ?? '—';
+      document.getElementById('slTotal').textContent = `of ${d.sl_total ?? 12} days`;
+      document.getElementById('slUsed').textContent = `${d.sl_used ?? 0} used this year`;
+      document.getElementById('slBar').style.width = `${100 - ((d.sl_remaining / d.sl_total) * 100)}%`;
+      document.getElementById('pendingLeave').textContent = d.pending_requests ?? 0;
+    }
+  }
+
+  async function loadRequests() {
+    const res = await API.get('/leave/requests');
+    allRequests = res.ok ? res.data.requests || [] : [];
+    renderRequests(allRequests);
+  }
+
+  function renderRequests(list) {
+    const container = document.getElementById('leaveHistory');
+    if (!list.length) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><h3>No requests</h3><p>Your leave history will appear here</p></div>`;
+      return;
+    }
+    const icons = { CL: '🏖️', SL: '🏥' };
+    const bgColors = { CL: 'var(--accent-2-soft)', SL: 'var(--success-soft)' };
+    container.innerHTML = list.map(r => `
+      <div class="leave-req-item">
+        <div class="leave-req-icon" style="background:${bgColors[r.type] || 'var(--bg-secondary)'}">${icons[r.type] || '📅'}</div>
+        <div>
+          <div class="leave-req-type">${r.type === 'CL' ? 'Casual Leave' : 'Sick Leave'}</div>
+          <div class="leave-req-dates">${Utils.formatDate(r.from_date)} → ${Utils.formatDate(r.to_date)}</div>
+          ${r.reason ? `<div class="leave-req-reason">${r.reason}</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          <div class="leave-req-days">${r.days}</div>
+          <div class="leave-req-days-label">days</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span class="badge badge-${r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : 'warning'}">${r.status}</span>
+          ${r.status === 'pending' ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px" onclick="cancelRequest('${r.id}')">Cancel</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function filterRequests(status, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const filtered = status === 'all' ? allRequests : allRequests.filter(r => r.status === status);
+    renderRequests(filtered);
+  }
+
+  async function applyLeave() {
+    const type = document.getElementById('leaveType').value;
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    const reason = document.getElementById('leaveReason').value.trim();
+
+    if (!from || !to) { Toast.error('Please select date range'); return; }
+    if (!reason) { Toast.error('Please provide a reason'); return; }
+
+    const btn = document.getElementById('applyBtn');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+
+    const res = await API.post('/leave/apply', { type, from_date: from, to_date: to, reason });
+    if (res.ok) {
+      Toast.success('Leave request submitted successfully!');
+      document.getElementById('fromDate').value = '';
+      document.getElementById('toDate').value = '';
+      document.getElementById('leaveReason').value = '';
+      document.getElementById('daysPreview').textContent = '';
+      loadBalance(); loadRequests();
+    } else {
+      Toast.error(res.data.error || 'Failed to submit request');
+    }
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Submit Request`;
+  }
+
+  function cancelRequest(id) {
+    cancelTargetId = id;
+    openModal('cancelModal');
+  }
+
+  async function confirmCancel() {
+    closeModal('cancelModal');
+    const res = await API.delete(`/leave/requests/${cancelTargetId}`);
+    if (res.ok) {
+      Toast.success('Request cancelled');
+      loadBalance(); loadRequests();
+    } else {
+      Toast.error(res.data.error || 'Could not cancel request');
+    }
+    cancelTargetId = null;
+  }
+
+  loadBalance();
+  loadRequests();
+</script>
+</body>
+</html>

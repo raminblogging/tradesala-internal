@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employees · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+
+    /* ── Page Header ────────────────────────────────────────────── */
+    .dir-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .dir-header h1 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+    .dir-header p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .emp-count-badge {
+      background: var(--accent-soft);
+      border: 1px solid rgba(0,212,170,0.2);
+      color: var(--accent);
+      padding: 5px 13px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* ── Search & Filter Bar ────────────────────────────────────── */
+    .dir-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .dir-search {
+      flex: 1;
+      min-width: 220px;
+      padding: 9px 14px 9px 38px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-body);
+      outline: none;
+      transition: var(--transition);
+      position: relative;
+    }
+    .dir-search:focus { border-color: var(--accent); }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px; height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .dir-select {
+      padding: 9px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-body);
+      outline: none;
+      transition: var(--transition);
+      cursor: pointer;
+      min-width: 160px;
+    }
+    .dir-select:focus { border-color: var(--accent); }
+
+    /* ── View Toggle ────────────────────────────────────────────── */
+    .view-toggle {
+      display: flex;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .view-btn {
+      padding: 7px 12px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+    }
+    .view-btn.active { background: var(--accent-soft); color: var(--accent); }
+    .view-btn svg { width: 15px; height: 15px; }
+
+    /* ── Department Tabs ────────────────────────────────────────── */
+    .dept-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .dept-tab {
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1.5px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-muted);
+    }
+    .dept-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .dept-tab.active { background: var(--accent-soft); border-color: rgba(0,212,170,0.3); color: var(--accent); }
+
+    /* ── Grid View ──────────────────────────────────────────────── */
+    .emp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .emp-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .emp-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .emp-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: rgba(0,212,170,0.2); }
+    .emp-card:hover::before { opacity: 1; }
+
+    .emp-card-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+      color: #000;
+      font-family: var(--font-display);
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .emp-card-avatar .online-ring {
+      position: absolute;
+      bottom: 1px; right: 1px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--success);
+      border: 2px solid var(--bg-card);
+    }
+    .emp-card-name {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 2px;
+    }
+    .emp-card-desig {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .emp-card-dept {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      background: var(--bg-secondary);
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+    .emp-card-contacts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .emp-contact-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .emp-contact-row svg { width: 12px; height: 12px; color: var(--text-muted); flex-shrink: 0; }
+    .emp-contact-row a { color: var(--text-secondary); text-decoration: none; transition: var(--transition); }
+    .emp-contact-row a:hover { color: var(--accent); }
+    .emp-contact-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── List View ──────────────────────────────────────────────── */
+    .emp-list { display: flex; flex-direction: column; gap: 0; }
+    .emp-list-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0;
+      border-bottom: none;
+      transition: var(--transition);
+    }
+    .emp-list-row:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+    .emp-list-row:last-child  { border-radius: 0 0 var(--radius-lg) var(--radius-lg); border-bottom: 1px solid var(--border); }
+    .emp-list-row:only-child  { border-radius: var(--radius-lg); border-bottom: 1px solid var(--border); }
+    .emp-list-row:hover { background: var(--bg-secondary); }
+
+    .emp-list-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #000;
+      font-family: var(--font-display);
+      flex-shrink: 0;
+    }
+    .emp-list-info { flex: 1; min-width: 0; }
+    .emp-list-name { font-size: 13.5px; font-weight: 600; letter-spacing: -0.02em; }
+    .emp-list-sub  { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+    .emp-list-dept { min-width: 120px; }
+    .emp-list-contact {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 180px;
+    }
+    .emp-list-contact-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .emp-list-contact-row svg { width: 11px; height: 11px; color: var(--text-muted); flex-shrink: 0; }
+    .emp-list-contact-row a { color: var(--text-secondary); text-decoration: none; }
+    .emp-list-contact-row a:hover { color: var(--accent); }
+
+    /* ── Empty / Loading ────────────────────────────────────────── */
+    .dir-empty {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-muted);
+    }
+    .dir-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+    .dir-empty h3   { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; }
+    .dir-empty p    { font-size: 13px; }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .emp-grid { grid-template-columns: 1fr 1fr; }
+      .emp-list-contact { display: none; }
+      .emp-list-dept { display: none; }
+    }
+    @media (max-width: 480px) {
+      .emp-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+
+  <div class="main-content">
+    <div class="topbar"></div>
+
+    <div class="page-content">
+
+      <!-- Header -->
+      <div class="dir-header animate-in">
+        <div>
+          <h1>Employee Directory</h1>
+          <p>All team members, their departments and contact details</p>
+        </div>
+        <div class="emp-count-badge" id="empCountBadge">Loading…</div>
+      </div>
+
+      <!-- Controls -->
+      <div class="dir-controls animate-in" style="animation-delay:.04s">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" class="dir-search" id="dirSearch"
+            placeholder="Search by name, department, email…"
+            oninput="filterEmployees()">
+        </div>
+        <select class="dir-select" id="deptFilter" onchange="filterEmployees()">
+          <option value="">All Departments</option>
+        </select>
+        <div class="view-toggle">
+          <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')" title="Grid view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </button>
+          <button class="view-btn" id="listViewBtn" onclick="setView('list')" title="List view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Department Filter Tabs -->
+      <div class="dept-tabs animate-in" id="deptTabs" style="animation-delay:.06s">
+        <div class="dept-tab active" onclick="filterByDept('', this)">All</div>
+      </div>
+
+      <!-- Employee Container -->
+      <div class="animate-in" id="empContainer" style="animation-delay:.08s">
+        <div class="dir-empty">
+          <div class="dir-empty-icon">👥</div>
+          <h3>Loading employees…</h3>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  const user = Auth.requireAuth();
+  if (!user) throw new Error('Not authenticated');
+
+  buildSidebar('employees');
+  buildTopbar('Employee Directory');
+
+  let allEmployees = [];
+  let currentView = 'grid';
+  let currentDept = '';
+
+  loadEmployees();
+
+  async function loadEmployees() {
+    // All employees can see the directory — use admin endpoint if admin, else build from public data
+    const res = await API.get('/admin/employees');
+    if (!res.ok) {
+      // Non-admin fallback — show limited info from online endpoint
+      document.getElementById('empContainer').innerHTML = `
+        <div class="dir-empty">
+          <div class="dir-empty-icon">🔒</div>
+          <h3>Directory unavailable</h3>
+          <p>Contact your admin to enable directory access</p>
+        </div>`;
+      return;
+    }
+
+    allEmployees = (res.data.employees || []).filter(e => e.status === 'active');
+
+    // Build department tabs
+    const depts = [...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort();
+    const tabsEl = document.getElementById('deptTabs');
+    tabsEl.innerHTML = `<div class="dept-tab active" onclick="filterByDept('', this)">All <span style="opacity:.5;font-weight:400">${allEmployees.length}</span></div>` +
+      depts.map(d => {
+        const count = allEmployees.filter(e => e.department === d).length;
+        return `<div class="dept-tab" onclick="filterByDept('${d}', this)">${d} <span style="opacity:.5;font-weight:400">${count}</span></div>`;
+      }).join('');
+
+    // Populate select filter
+    document.getElementById('deptFilter').innerHTML =
+      `<option value="">All Departments</option>` +
+      depts.map(d => `<option value="${d}">${d}</option>`).join('');
+
+    renderEmployees(allEmployees);
+  }
+
+  function filterByDept(dept, el) {
+    currentDept = dept;
+    document.querySelectorAll('.dept-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('deptFilter').value = dept;
+    filterEmployees();
+  }
+
+  function filterEmployees() {
+    const q    = document.getElementById('dirSearch').value.toLowerCase();
+    const dept = document.getElementById('deptFilter').value || currentDept;
+
+    // Sync dept tab if changed via select
+    if (document.getElementById('deptFilter').value !== currentDept) {
+      currentDept = document.getElementById('deptFilter').value;
+      document.querySelectorAll('.dept-tab').forEach(t => {
+        t.classList.toggle('active',
+          (currentDept === '' && t.textContent.trim().startsWith('All')) ||
+          t.textContent.trim().startsWith(currentDept)
+        );
+      });
+    }
+
+    const filtered = allEmployees.filter(e => {
+      const matchQ = !q ||
+        e.name?.toLowerCase().includes(q) ||
+        e.department?.toLowerCase().includes(q) ||
+        e.designation?.toLowerCase().includes(q) ||
+        e.email?.toLowerCase().includes(q) ||
+        e.employee_id?.toLowerCase().includes(q);
+      const matchD = !dept || e.department === dept;
+      return matchQ && matchD;
+    });
+
+    renderEmployees(filtered);
+  }
+
+  function setView(view) {
+    currentView = view;
+    document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+    document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+    filterEmployees();
+  }
+
+  function renderEmployees(list) {
+    const container = document.getElementById('empContainer');
+    const badge     = document.getElementById('empCountBadge');
+
+    badge.textContent = list.length === allEmployees.length
+      ? `${list.length} employees`
+      : `${list.length} of ${allEmployees.length}`;
+
+    if (!list.length) {
+      container.innerHTML = `
+        <div class="dir-empty">
+          <div class="dir-empty-icon">🔍</div>
+          <h3>No employees found</h3>
+          <p>Try a different search or department filter</p>
+        </div>`;
+      return;
+    }
+
+    if (currentView === 'grid') {
+      container.innerHTML = `<div class="emp-grid">${list.map(empCard).join('')}</div>`;
+    } else {
+      container.innerHTML = `<div class="emp-list">${list.map(empListRow).join('')}</div>`;
+    }
+  }
+
+  function empCard(e) {
+    const initials = Utils.initials(e.name);
+    const colors   = deptColor(e.department);
+    return `
+      <div class="emp-card">
+        <div class="emp-card-avatar" style="background:${colors.bg}">
+          <span style="color:${colors.text}">${initials}</span>
+        </div>
+        <div class="emp-card-name">${e.name}</div>
+        <div class="emp-card-desig">${e.designation || 'Team Member'}</div>
+        <div class="emp-card-dept">${e.department || 'General'}</div>
+        <div class="emp-card-contacts">
+          ${e.email ? `
+            <div class="emp-contact-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <a href="mailto:${e.email}">${e.email}</a>
+            </div>` : '<div class="emp-contact-row" style="color:var(--text-muted);font-style:italic">No email on file</div>'}
+          ${e.phone ? `
+            <div class="emp-contact-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              <span>${e.phone}</span>
+            </div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function empListRow(e) {
+    const initials = Utils.initials(e.name);
+    const colors   = deptColor(e.department);
+    return `
+      <div class="emp-list-row">
+        <div class="emp-list-avatar" style="background:${colors.bg}">
+          <span style="color:${colors.text}">${initials}</span>
+        </div>
+        <div class="emp-list-info">
+          <div class="emp-list-name">${e.name}</div>
+          <div class="emp-list-sub">#${e.employee_id}</div>
+        </div>
+        <div class="emp-list-dept">
+          <span class="badge badge-neutral">${e.department || 'General'}</span>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:3px">${e.designation || ''}</div>
+        </div>
+        <div class="emp-list-contact">
+          ${e.email ? `
+            <div class="emp-list-contact-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <a href="mailto:${e.email}">${e.email}</a>
+            </div>` : ''}
+          ${e.phone ? `
+            <div class="emp-list-contact-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+              <span>${e.phone}</span>
+            </div>` : ''}
+        </div>
+        <div style="margin-left:auto">
+          <span class="badge badge-${e.role === 'admin' ? 'info' : 'neutral'}" style="font-size:10px">${e.role}</span>
+        </div>
+      </div>`;
+  }
+
+  // Assign consistent colors per department
+  const deptColors = [
+    { bg: 'linear-gradient(135deg,#00D4AA,#00B894)', text: '#000' },
+    { bg: 'linear-gradient(135deg,#F5A623,#E09112)', text: '#000' },
+    { bg: 'linear-gradient(135deg,#4F8EF7,#3B6FD4)', text: '#fff' },
+    { bg: 'linear-gradient(135deg,#FF4D6A,#D93652)', text: '#fff' },
+    { bg: 'linear-gradient(135deg,#A855F7,#7C3AED)', text: '#fff' },
+    { bg: 'linear-gradient(135deg,#06B6D4,#0891B2)', text: '#fff' },
+    { bg: 'linear-gradient(135deg,#10B981,#059669)', text: '#fff' },
+    { bg: 'linear-gradient(135deg,#F59E0B,#D97706)', text: '#000' },
+  ];
+  const deptColorMap = {};
+  function deptColor(dept) {
+    if (!dept) return deptColors[0];
+    if (!deptColorMap[dept]) {
+      const keys = Object.keys(deptColorMap).length;
+      deptColorMap[dept] = deptColors[keys % deptColors.length];
+    }
+    return deptColorMap[dept];
+  }
+</script>
+</body>
+</html>

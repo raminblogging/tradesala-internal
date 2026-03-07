@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Queries · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .page-header h1 { font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:-0.04em; }
+    .toolbar { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); z-index:500; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-xl); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-xl); }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border); }
+    .modal-title { font-family:var(--font-display); font-size:17px; font-weight:700; }
+    .modal-body { padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+    .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media(max-width:600px){ .form-row{grid-template-columns:1fr} }
+    .query-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+    .filter-chip { padding:6px 14px; border-radius:100px; font-size:12px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:var(--bg-card); color:var(--text-muted); transition:var(--transition); }
+    .filter-chip.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+    .stat-chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+    .stat-chip { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; display:flex; gap:10px; align-items:center; }
+    .stat-chip-val { font-family:var(--font-display); font-size:20px; font-weight:700; }
+    .stat-chip-label { font-size:11px; color:var(--text-muted); font-weight:600; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+  <div class="main-content">
+    <div class="topbar"></div>
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <div>
+          <h1>Query Tracker</h1>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:3px">Raise and track internal issues & requests</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('createQueryModal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Raise Query
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-chips animate-in" style="animation-delay:.04s">
+        <div class="stat-chip"><div><div class="stat-chip-val" id="statOpen">—</div><div class="stat-chip-label">Open</div></div></div>
+        <div class="stat-chip"><div><div class="stat-chip-val" id="statInProg">—</div><div class="stat-chip-label">In Progress</div></div></div>
+        <div class="stat-chip"><div><div class="stat-chip-val" id="statWaiting">—</div><div class="stat-chip-label">Waiting</div></div></div>
+        <div class="stat-chip"><div><div class="stat-chip-val" id="statResolved">—</div><div class="stat-chip-label">Resolved</div></div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="query-filters animate-in" style="animation-delay:.06s">
+        <div class="filter-chip active" onclick="setFilter('all',this)">All</div>
+        <div class="filter-chip" onclick="setFilter('open',this)">Open</div>
+        <div class="filter-chip" onclick="setFilter('in_progress',this)">In Progress</div>
+        <div class="filter-chip" onclick="setFilter('waiting',this)">Waiting</div>
+        <div class="filter-chip" onclick="setFilter('resolved',this)">Resolved</div>
+        <div class="filter-chip" onclick="setFilter('closed',this)">Closed</div>
+      </div>
+
+      <!-- Search -->
+      <div class="toolbar animate-in" style="animation-delay:.08s">
+        <input class="form-input" id="searchQuery" placeholder="Search queries…" oninput="renderQueries()" style="flex:1;max-width:320px">
+        <select class="form-input" id="filterDept" onchange="renderQueries()" style="width:160px">
+          <option value="">All Departments</option>
+          <option value="IT">IT</option>
+          <option value="HR">HR</option>
+          <option value="Finance">Finance</option>
+          <option value="Operations">Operations</option>
+        </select>
+        <select class="form-input" id="filterPriority" onchange="renderQueries()" style="width:130px">
+          <option value="">All Priorities</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+
+      <!-- Query List -->
+      <div id="queryList" class="animate-in" style="animation-delay:.1s">
+        <div style="text-align:center;padding:48px;color:var(--text-muted)">Loading…</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Create Query Modal -->
+<div class="modal-overlay" id="createQueryModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Raise a Query</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('createQueryModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Title *</label>
+        <input type="text" class="form-input" id="qTitle" placeholder="Brief summary of your issue…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description *</label>
+        <textarea class="form-input" id="qDesc" rows="4" style="resize:vertical" placeholder="Explain your issue in detail…"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <select class="form-input" id="qDept">
+            <option value="IT">IT</option>
+            <option value="HR">HR</option>
+            <option value="Finance">Finance</option>
+            <option value="Operations">Operations</option>
+            <option value="Admin">Admin</option>
+            <option value="Management">Management</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-input" id="qPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('createQueryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createQuery()">Submit Query</button>
+    </div>
+  </div>
+</div>
+
+<!-- Query Detail Modal -->
+<div class="modal-overlay" id="queryDetailModal">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="qDetailTitle">Query</div>
+        <div id="qDetailId" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('queryDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="qDetailBody"></div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+const user = Auth.requireAuth();
+if (!user) throw new Error('Not authenticated');
+buildSidebar('queries');
+buildTopbar('Queries');
+
+let allQueries = [];
+let currentFilter = 'all';
+
+const statusLabels = { open:'Open', in_progress:'In Progress', waiting:'Waiting', resolved:'Resolved', closed:'Closed' };
+const priorityLabels = { low:'Low', medium:'Medium', high:'High' };
+
+async function loadQueries() {
+  const res = await API.get('/queries');
+  if (!res.ok) { Toast.error('Failed to load queries'); return; }
+  allQueries = res.data.queries || [];
+  updateStats();
+  renderQueries();
+}
+
+function updateStats() {
+  ['open','in_progress','waiting','resolved'].forEach(s => {
+    const el = document.getElementById('stat' + s.replace('_','').replace(/^(\w)/, c => c.toUpperCase()).replace('rogresss','rogress').replace('nProgress','nProg'));
+    if (el) el.textContent = allQueries.filter(q => q.status === s).length;
+  });
+  document.getElementById('statOpen').textContent = allQueries.filter(q => q.status === 'open').length;
+  document.getElementById('statInProg').textContent = allQueries.filter(q => q.status === 'in_progress').length;
+  document.getElementById('statWaiting').textContent = allQueries.filter(q => q.status === 'waiting').length;
+  document.getElementById('statResolved').textContent = allQueries.filter(q => q.status === 'resolved').length;
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderQueries();
+}
+
+function renderQueries() {
+  const search = document.getElementById('searchQuery').value.toLowerCase();
+  const dept   = document.getElementById('filterDept').value;
+  const priority = document.getElementById('filterPriority').value;
+
+  let list = allQueries.filter(q => {
+    if (currentFilter !== 'all' && q.status !== currentFilter) return false;
+    if (search && !q.title.toLowerCase().includes(search) && !q.description?.toLowerCase().includes(search)) return false;
+    if (dept && q.department !== dept) return false;
+    if (priority && q.priority !== priority) return false;
+    return true;
+  });
+
+  const el = document.getElementById('queryList');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">❓</div><h3>No queries found</h3><p>Raise a query to get started</p></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(q => `
+    <div class="query-item" onclick="viewQuery(${q.id})">
+      <div>
+        <div class="query-id">Q-${String(q.id).padStart(4,'0')}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${Utils.formatDate(q.created_at)}</div>
+      </div>
+      <div>
+        <div class="query-title">${q.title}</div>
+        <div class="query-meta">
+          <span class="query-dept">${q.department}</span>
+          <span class="priority-badge priority-${q.priority}">${priorityLabels[q.priority]}</span>
+          ${q.assignee_name ? `<span style="font-size:11px;color:var(--text-muted)">👤 ${q.assignee_name}</span>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <span class="status-badge status-${q.status==='in_progress'?'inprogress':q.status}">${statusLabels[q.status]}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function createQuery() {
+  const title = document.getElementById('qTitle').value.trim();
+  const desc  = document.getElementById('qDesc').value.trim();
+  if (!title || !desc) { Toast.error('Title and description are required'); return; }
+  const res = await API.post('/queries', {
+    title, description: desc,
+    department: document.getElementById('qDept').value,
+    priority: document.getElementById('qPriority').value,
+  });
+  if (res.ok) {
+    Toast.success('Query submitted!');
+    closeModal('createQueryModal');
+    document.getElementById('qTitle').value = '';
+    document.getElementById('qDesc').value = '';
+    loadQueries();
+  } else {
+    Toast.error(res.data.error || 'Failed to submit query');
+  }
+}
+
+async function viewQuery(id) {
+  const q = allQueries.find(x => x.id === id);
+  if (!q) return;
+  document.getElementById('qDetailTitle').textContent = q.title;
+  document.getElementById('qDetailId').textContent = `Q-${String(q.id).padStart(4,'0')} · Raised by ${q.author_name || 'You'}`;
+  document.getElementById('qDetailBody').innerHTML = `
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(this,'qTabDetails')">Details</button>
+      <button class="tab-btn" onclick="switchTab(this,'qTabComments')">Comments</button>
+    </div>
+    <div class="tab-pane active" id="qTabDetails">
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.55">${q.description}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="profile-field"><div class="profile-field-label">Department</div><div class="profile-field-val">${q.department}</div></div>
+        <div class="profile-field"><div class="profile-field-label">Priority</div><div><span class="priority-badge priority-${q.priority}">${priorityLabels[q.priority]}</span></div></div>
+        <div class="profile-field"><div class="profile-field-label">Status</div><div><span class="status-badge status-${q.status==='in_progress'?'inprogress':q.status}">${statusLabels[q.status]}</span></div></div>
+        <div class="profile-field"><div class="profile-field-label">Assigned To</div><div class="profile-field-val">${q.assignee_name||'Unassigned'}</div></div>
+        <div class="profile-field"><div class="profile-field-label">Created</div><div class="profile-field-val">${Utils.formatDate(q.created_at)}</div></div>
+      </div>
+      ${q.author_id === user.id || user.role === 'admin' ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${['open','in_progress','waiting','resolved','closed'].map(s => `
+          <button class="btn ${q.status===s?'btn-primary':'btn-ghost'} btn-sm" onclick="changeQueryStatus(${q.id},'${s}')">${statusLabels[s]}</button>
+        `).join('')}
+      </div>` : ''}
+    </div>
+    <div class="tab-pane" id="qTabComments">
+      <div class="comment-list" id="queryComments">Loading…</div>
+      <div class="comment-input-row" style="margin-top:12px">
+        <input type="text" class="form-input" id="qCommentInput" placeholder="Write a comment…" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="addQueryComment(${q.id})">Post</button>
+      </div>
+    </div>
+  `;
+  openModal('queryDetailModal');
+  loadQueryComments(id);
+}
+
+async function changeQueryStatus(id, status) {
+  const res = await API.put('/queries/' + id, { status });
+  if (res.ok) { closeModal('queryDetailModal'); loadQueries(); Toast.success('Status updated'); }
+  else Toast.error('Failed to update status');
+}
+
+async function loadQueryComments(id) {
+  const res = await API.get('/queries/' + id + '/comments');
+  const el = document.getElementById('queryComments');
+  if (!el) return;
+  if (!res.ok || !res.data.comments?.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">No comments yet</div>'; return; }
+  el.innerHTML = res.data.comments.map(c => `
+    <div class="comment-item">
+      <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">${Utils.initials(c.author_name)}</div>
+      <div class="comment-bubble">
+        <div class="comment-author">${c.author_name}</div>
+        <div class="comment-text">${c.content}</div>
+        <div class="comment-time">${Utils.timeAgo(c.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addQueryComment(queryId) {
+  const input = document.getElementById('qCommentInput');
+  const content = input.value.trim();
+  if (!content) return;
+  const res = await API.post('/queries/' + queryId + '/comments', { content });
+  if (res.ok) { input.value = ''; loadQueryComments(queryId); } else Toast.error('Failed to post comment');
+}
+
+function switchTab(btn, paneId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId)?.classList.add('active');
+}
+
+loadQueries();
+</script>
+</body>
+</html>

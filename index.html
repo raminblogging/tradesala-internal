@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard · Internal Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Welcome Banner ─────────────────────────────────────────── */
+    .welcome-banner {
+      background: linear-gradient(135deg, #080B12 0%, #081e2e 50%, #0a1a1a 100%);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(0,212,170,0.18);
+      box-shadow: 0 0 40px rgba(0,212,170,0.05);
+    }
+    .welcome-banner::before {
+      content: '';
+      position: absolute; right: -80px; top: -80px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(0,212,170,.12) 0%, transparent 65%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .welcome-banner::after {
+      content: '';
+      position: absolute; left: 40%; bottom: -40px;
+      width: 180px; height: 180px;
+      background: radial-gradient(circle, rgba(245,166,35,.06) 0%, transparent 65%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .welcome-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .welcome-banner h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      letter-spacing: -0.03em;
+    }
+    .welcome-banner .welcome-sub {
+      font-size: 12.5px;
+      color: rgba(255,255,255,.4);
+      letter-spacing: -0.01em;
+    }
+    .welcome-badge {
+      background: rgba(0,212,170,0.12);
+      border: 1px solid rgba(0,212,170,0.25);
+      border-radius: 100px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #00D4AA;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+    .checkin-row {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+    .checkin-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      font-family: var(--font-body);
+      letter-spacing: -0.01em;
+    }
+    .checkin-btn:hover { background: var(--accent-hover); box-shadow: 0 0 20px rgba(0,212,170,.4); transform: translateY(-1px); }
+    .checkin-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+    .checkin-btn.checked-in { background: var(--success); }
+    .checkin-btn.checked-out { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.1); }
+    .checkout-btn {
+      background: transparent;
+      color: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+      font-family: var(--font-body);
+    }
+    .checkout-btn:hover { border-color: var(--danger); color: var(--danger); }
+    .checkin-time {
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Stats ──────────────────────────────────────────────────── */
+    .stat-card-inner { display: flex; align-items: flex-start; justify-content: space-between; }
+    .stat-trend {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 7px;
+      border-radius: 100px;
+      letter-spacing: 0.02em;
+    }
+    .stat-trend.up { background: var(--success-soft); color: var(--success); }
+    .stat-trend.neutral { background: var(--accent-2-soft); color: var(--accent-2); }
+
+    /* ── Leave Balance Card ─────────────────────────────────────── */
+    .leave-bars { display: flex; flex-direction: column; gap: 14px; }
+    .leave-bar-row { display: flex; flex-direction: column; gap: 6px; }
+    .leave-bar-top { display: flex; justify-content: space-between; align-items: center; }
+    .leave-bar-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .leave-bar-val { font-size: 12px; font-weight: 700; }
+    .leave-bar-val.cl { color: var(--accent-2); }
+    .leave-bar-val.sl { color: var(--success); }
+    .leave-bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .leave-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+    .leave-bar-fill.cl { background: var(--accent-2); }
+    .leave-bar-fill.sl { background: var(--success); }
+
+    /* ── Quick Actions ──────────────────────────────────────────── */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .quick-link {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg-secondary);
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: var(--transition);
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text-secondary);
+    }
+    .quick-link:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .quick-link-icon {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-xs);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      transition: var(--transition);
+    }
+    .quick-link:hover .quick-link-icon { background: var(--accent-soft); border-color: var(--accent); }
+
+    /* ── Activity Feed ──────────────────────────────────────────── */
+    .activity-list { display: flex; flex-direction: column; }
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .activity-dot-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 4px;
+      gap: 0;
+    }
+    .activity-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+    .activity-dot.green  { background: var(--success); }
+    .activity-dot.amber  { background: var(--accent-2); }
+    .activity-dot.blue   { background: #4F8EF7; }
+    .activity-dot.red    { background: var(--danger); }
+    .activity-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
+    .activity-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Online Members ─────────────────────────────────────────── */
+    .members-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .member-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px 6px 6px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+    .member-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .member-avatar {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      border: 1px solid rgba(0,212,170,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .online-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      flex-shrink: 0;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .col-left  { display: flex; flex-direction: column; gap: 16px; }
+    .col-right { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ── Attendance Status Bar ──────────────────────────────────── */
+    .att-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--success-soft);
+      border: 1px solid rgba(0,201,122,0.2);
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--success);
+    }
+    .att-status-bar.absent {
+      background: var(--danger-soft);
+      border-color: rgba(255,77,106,0.2);
+      color: var(--danger);
+    }
+    .att-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .quick-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .welcome-top { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+
+  <div class="main-content">
+    <div class="topbar"></div>
+
+    <div class="page-content">
+
+      <!-- Welcome Banner -->
+      <div class="welcome-banner animate-in">
+        <div class="welcome-top">
+          <div>
+            <h2 id="welcomeText">Good morning! 👋</h2>
+            <div class="welcome-sub" id="welcomeDate"></div>
+          </div>
+          <div class="welcome-badge" id="roleBadge">Employee</div>
+        </div>
+
+        <div class="checkin-row">
+          <button class="checkin-btn" id="checkinBtn" onclick="handleCheckin()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span id="checkinBtnText">Check In</span>
+          </button>
+          <button class="checkout-btn" id="checkoutBtn" onclick="handleCheckout()" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Check Out
+          </button>
+          <span class="checkin-time" id="checkinTimeLabel"></span>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stat-grid animate-in" style="animation-delay:.05s">
+        <div class="stat-card">
+          <div class="stat-card-inner">
+            <div class="stat-icon orange">📅</div>
+            <span class="stat-trend neutral" id="trendPresent">Month</span>
+          </div>
+          <div class="stat-value" id="statPresent">—</div>
+          <div class="stat-label">Days Present</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-inner">
+            <div class="stat-icon blue">🏖️</div>
+            <span class="stat-trend up" id="trendCL">CL</span>
+          </div>
+          <div class="stat-value" id="statCL">—</div>
+          <div class="stat-label">Casual Leave Left</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-inner">
+            <div class="stat-icon green">🏥</div>
+            <span class="stat-trend up" id="trendSL">SL</span>
+          </div>
+          <div class="stat-value" id="statSL">—</div>
+          <div class="stat-label">Sick Leave Left</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-inner">
+            <div class="stat-icon yellow">📋</div>
+            <span class="stat-trend neutral" id="trendPending">Pending</span>
+          </div>
+          <div class="stat-value" id="statPending">—</div>
+          <div class="stat-label">Leave Requests</div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Grid -->
+      <div class="dashboard-grid animate-in" style="animation-delay:.1s">
+
+        <!-- LEFT COLUMN -->
+        <div class="col-left">
+
+          <!-- Attendance Status -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Today's Attendance</div>
+              <a href="attendance.html" class="btn btn-ghost btn-sm">Details →</a>
+            </div>
+            <div id="attStatusBar" class="att-status-bar absent">
+              <span class="att-status-dot"></span>
+              <span id="attStatusText">Not checked in yet</span>
+            </div>
+            <div id="attTimes" style="display:none; margin-top:12px; display:none">
+              <div style="display:flex; gap:16px; margin-top:12px">
+                <div style="flex:1; text-align:center; padding:10px; background:var(--bg-secondary); border-radius:var(--radius-sm)">
+                  <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px">Check In</div>
+                  <div style="font-family:var(--font-display); font-size:17px; font-weight:700; color:var(--success)" id="displayCheckIn">—</div>
+                </div>
+                <div style="flex:1; text-align:center; padding:10px; background:var(--bg-secondary); border-radius:var(--radius-sm)">
+                  <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px">Check Out</div>
+                  <div style="font-family:var(--font-display); font-size:17px; font-weight:700; color:var(--text-muted)" id="displayCheckOut">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leave Balance -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Leave Balance</div>
+              <a href="leave.html" class="btn btn-ghost btn-sm">Apply →</a>
+            </div>
+            <div class="leave-bars">
+              <div class="leave-bar-row">
+                <div class="leave-bar-top">
+                  <span class="leave-bar-label">Casual Leave (CL)</span>
+                  <span class="leave-bar-val cl" id="clVal">— / 12</span>
+                </div>
+                <div class="leave-bar-track">
+                  <div class="leave-bar-fill cl" id="clBar" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="leave-bar-row">
+                <div class="leave-bar-top">
+                  <span class="leave-bar-label">Sick Leave (SL)</span>
+                  <span class="leave-bar-val sl" id="slVal">— / 12</span>
+                </div>
+                <div class="leave-bar-track">
+                  <div class="leave-bar-fill sl" id="slBar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Quick Actions</div>
+            </div>
+            <div class="quick-grid">
+              <a href="attendance.html" class="quick-link">
+                <div class="quick-link-icon">🕐</div>
+                Attendance Log
+              </a>
+              <a href="leave.html" class="quick-link">
+                <div class="quick-link-icon">📝</div>
+                Apply Leave
+              </a>
+              <a href="tasks.html" class="quick-link">
+                <div class="quick-link-icon">✅</div>
+                My Tasks
+              </a>
+              <a href="queries.html" class="quick-link">
+                <div class="quick-link-icon">❓</div>
+                Raise Query
+              </a>
+              <a href="calendar.html" class="quick-link">
+                <div class="quick-link-icon">📅</div>
+                Calendar
+              </a>
+              <a href="feed.html" class="quick-link">
+                <div class="quick-link-icon">💬</div>
+                Company Feed
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-right">
+
+          <!-- Recent Activity -->
+          <div class="card" style="flex:1">
+            <div class="card-header">
+              <div class="card-title">Recent Activity</div>
+            </div>
+            <div class="activity-list" id="activityList">
+              <div style="text-align:center;padding:32px 0;color:var(--text-muted);font-size:13px">
+                <div style="font-size:28px;margin-bottom:8px;opacity:0.4">📋</div>
+                Loading…
+              </div>
+            </div>
+          </div>
+
+          <!-- Online Now -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Online Now</div>
+              <span id="onlineCount" style="font-size:11px;color:var(--text-muted);font-weight:600"></span>
+            </div>
+            <div class="members-grid" id="membersGrid">
+              <div style="color:var(--text-muted);font-size:12px">Loading…</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<script src="js/app.js"></script>
+<script>
+  const user = Auth.requireAuth();
+  if (!user) throw new Error('Not authenticated');
+
+  // ── Build Layout ───────────────────────────────────────────────
+  buildSidebar('dashboard');
+  buildTopbar('Dashboard');
+
+  // ── Welcome Banner ─────────────────────────────────────────────
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('welcomeText').textContent = `${greeting}, ${user.name?.split(' ')[0] || 'there'}! 👋`;
+  document.getElementById('welcomeDate').textContent = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  if (user.role === 'admin') {
+    const badge = document.getElementById('roleBadge');
+    badge.textContent = 'Admin';
+    badge.style.background = 'rgba(245,166,35,0.15)';
+    badge.style.borderColor = 'rgba(245,166,35,0.3)';
+    badge.style.color = '#F5A623';
+  }
+
+  // ── Load All Data ──────────────────────────────────────────────
+  loadDashboard();
+
+  async function loadDashboard() {
+    const [attRes, leaveRes, actRes, onlineRes] = await Promise.all([
+      API.get('/attendance/today'),
+      API.get('/leave/balance'),
+      API.get('/activity/recent'),
+      API.get('/employees/online'),
+    ]);
+
+    renderAttendance(attRes);
+    renderLeave(leaveRes);
+    renderActivity(actRes);
+    renderOnline(onlineRes);
+  }
+
+  // ── Attendance ─────────────────────────────────────────────────
+  function renderAttendance(res) {
+    if (!res.ok) return;
+    const d = res.data;
+    const bar     = document.getElementById('attStatusBar');
+    const txt     = document.getElementById('attStatusText');
+    const cinBtn  = document.getElementById('checkinBtn');
+    const coutBtn = document.getElementById('checkoutBtn');
+    const timeLabel = document.getElementById('checkinTimeLabel');
+    const timesRow  = document.getElementById('attTimes');
+
+    if (d.checked_in) {
+      bar.classList.remove('absent');
+      txt.textContent = 'You are checked in today';
+      cinBtn.classList.add('checked-in');
+      cinBtn.disabled = true;
+      document.getElementById('checkinBtnText').textContent = 'Checked In ✓';
+
+      if (!d.checked_out) {
+        coutBtn.style.display = 'inline-flex';
+        const cin = new Date(d.check_in_time);
+        timeLabel.textContent = `Since ${cin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        coutBtn.style.display = 'none';
+        timeLabel.textContent = 'Day complete';
+      }
+
+      timesRow.style.display = 'block';
+      document.getElementById('displayCheckIn').textContent =
+        d.check_in_time ? new Date(d.check_in_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) : '—';
+      document.getElementById('displayCheckOut').textContent =
+        d.check_out_time ? new Date(d.check_out_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) : '—';
+
+    } else {
+      bar.classList.add('absent');
+      txt.textContent = 'Not checked in yet';
+      cinBtn.classList.remove('checked-in');
+      cinBtn.disabled = false;
+    }
+
+    // Stat card present days
+    API.get('/attendance/summary').then(r => {
+      if (r.ok) document.getElementById('statPresent').textContent = r.data.present_days ?? 0;
+    });
+  }
+
+  // ── Leave ──────────────────────────────────────────────────────
+  function renderLeave(res) {
+    if (!res.ok) return;
+    const d = res.data;
+    document.getElementById('statCL').textContent = d.cl_remaining ?? '—';
+    document.getElementById('statSL').textContent = d.sl_remaining ?? '—';
+    document.getElementById('statPending').textContent = d.pending_requests ?? 0;
+    document.getElementById('clVal').textContent = `${d.cl_remaining ?? '—'} / ${d.cl_total ?? 12}`;
+    document.getElementById('slVal').textContent = `${d.sl_remaining ?? '—'} / ${d.sl_total ?? 12}`;
+    const clPct = Math.round(((d.cl_remaining ?? 0) / (d.cl_total || 12)) * 100);
+    const slPct = Math.round(((d.sl_remaining ?? 0) / (d.sl_total || 12)) * 100);
+    setTimeout(() => {
+      document.getElementById('clBar').style.width = clPct + '%';
+      document.getElementById('slBar').style.width = slPct + '%';
+    }, 200);
+  }
+
+  // ── Activity ───────────────────────────────────────────────────
+  function renderActivity(res) {
+    const el = document.getElementById('activityList');
+    if (!res.ok || !res.data.activities?.length) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <h3>No recent activity</h3>
+          <p>Your actions will appear here</p>
+        </div>`;
+      return;
+    }
+    const colorMap = { checkin: 'green', checkout: 'green', leave: 'blue', post: 'amber' };
+    el.innerHTML = res.data.activities.map(a => `
+      <div class="activity-item">
+        <div class="activity-dot-wrap">
+          <div class="activity-dot ${colorMap[a.type] || ''}"></div>
+        </div>
+        <div style="flex:1">
+          <div class="activity-desc">${a.description}</div>
+          <div class="activity-time">${Utils.timeAgo(a.created_at)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Online Members ─────────────────────────────────────────────
+  function renderOnline(res) {
+    const grid = document.getElementById('membersGrid');
+    const count = document.getElementById('onlineCount');
+    if (!res.ok || !res.data.members?.length) {
+      grid.innerHTML = `<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No one active in the last 15 min</div>`;
+      count.textContent = '';
+      return;
+    }
+    const members = res.data.members;
+    count.textContent = `${members.length} active`;
+    grid.innerHTML = members.map(m => `
+      <div class="member-chip">
+        <div class="member-avatar">${m.name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <span>${m.name?.split(' ')[0]}</span>
+        <div class="online-dot"></div>
+      </div>
+    `).join('');
+  }
+
+  // ── Check In ───────────────────────────────────────────────────
+  async function handleCheckin() {
+    const btn = document.getElementById('checkinBtn');
+    btn.disabled = true;
+    document.getElementById('checkinBtnText').textContent = 'Checking in…';
+    const res = await API.post('/attendance/checkin', {});
+    if (res.ok) {
+      Toast.success('Checked in successfully! 🎉');
+      const attRes = await API.get('/attendance/today');
+      renderAttendance(attRes);
+    } else {
+      Toast.error(res.data.error || 'Could not check in');
+      btn.disabled = false;
+      document.getElementById('checkinBtnText').textContent = 'Check In';
+    }
+  }
+
+  // ── Check Out ──────────────────────────────────────────────────
+  async function handleCheckout() {
+    if (!confirm('Confirm check out?')) return;
+    const btn = document.getElementById('checkoutBtn');
+    btn.disabled = true;
+    const res = await API.post('/attendance/checkout', {});
+    if (res.ok) {
+      Toast.success(`Checked out! Total: ${res.data.duration}`);
+      const attRes = await API.get('/attendance/today');
+      renderAttendance(attRes);
+    } else {
+      Toast.error(res.data.error || 'Could not check out');
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
