@@ -1,0 +1,23 @@
+name = "tradesala-internal"
+main = "index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── D1 Database ──────────────────────────────────────────────────
+[[d1_databases]]
+binding = "DB"
+database_name = "tradesala-db"
+database_id = "a62f7e5a-26f3-4e40-a66d-23f29502bc98"
+
+# ─── R2 Bucket (Image Storage) ────────────────────────────────────
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "tradesala-uploads"
+
+# ─── Environment Variables ────────────────────────────────────────
+[vars]
+R2_PUBLIC_URL = "https://pub-XXXX.r2.dev"   # Replace pub-XXXX with your real R2 public bucket URL
+
+# JWT_SECRET must be set as a secret in the Cloudflare dashboard:
+# Worker Settings → Variables → Add variable → check Encrypt
+# Name: JWT_SECRET  |  Value: any long random string 32+ chars
