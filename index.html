@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Center · Internal Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+
+    /* ── Page Header ────────────────────────────────────────────── */
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .admin-header h1 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+    .admin-header p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .admin-badge {
+      background: rgba(245,166,35,0.12);
+      border: 1px solid rgba(245,166,35,0.25);
+      color: #F5A623;
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Stat Strip ─────────────────────────────────────────────── */
+    .admin-stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .admin-stat-strip .stat-card { cursor: default; }
+
+    /* ── Tabs ───────────────────────────────────────────────────── */
+    .admin-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1.5px solid var(--border);
+      margin-bottom: 22px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .admin-tabs::-webkit-scrollbar { display: none; }
+    .admin-tab {
+      padding: 11px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+      border-bottom: 2.5px solid transparent;
+      margin-bottom: -1.5px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      letter-spacing: -0.01em;
+    }
+    .admin-tab:hover { color: var(--text-primary); }
+    .admin-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-badge {
+      background: var(--danger);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 100px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Search / Filter Bar ────────────────────────────────────── */
+    .search-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .search-input {
+      padding: 8px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: var(--transition);
+      font-family: var(--font-body);
+    }
+    .search-input:focus { border-color: var(--accent); background: var(--bg-card); }
+
+    /* ── Employee Table ─────────────────────────────────────────── */
+    .emp-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #000;
+      font-family: var(--font-display);
+      flex-shrink: 0;
+    }
+    .emp-name { font-weight: 600; font-size: 13.5px; letter-spacing: -0.02em; }
+    .emp-id   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .emp-detail { font-size: 11.5px; color: var(--text-muted); }
+
+    /* ── Leave Request Row ──────────────────────────────────────── */
+    .leave-req-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .leave-req-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .leave-type-pill {
+      padding: 3px 9px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .leave-type-pill.CL { background: rgba(245,166,35,0.12); color: var(--accent-2); }
+    .leave-type-pill.SL { background: var(--success-soft); color: var(--success); }
+
+    /* ── Attendance Today List ──────────────────────────────────── */
+    .att-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .att-row:last-child { border-bottom: none; }
+    .att-times { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Override Form ──────────────────────────────────────────── */
+    .override-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── Add Employee Form ──────────────────────────────────────── */
+    .add-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* ── Empty State ────────────────────────────────────────────── */
+    .admin-empty {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-muted);
+    }
+    .admin-empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.5; }
+    .admin-empty h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary); }
+    .admin-empty p  { font-size: 12.5px; }
+
+    /* ── Modal Extra ────────────────────────────────────────────── */
+    .modal-header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .admin-stat-strip { grid-template-columns: 1fr 1fr; }
+      .add-form-grid    { grid-template-columns: 1fr; }
+      .override-form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar"></aside>
+
+  <div class="main-content">
+    <div class="topbar"></div>
+
+    <div class="page-content">
+
+      <!-- Page Header -->
+      <div class="admin-header animate-in">
+        <div>
+          <h1>Admin Center</h1>
+          <p>Manage employees, leave approvals, attendance overrides and more</p>
+        </div>
+        <div class="admin-badge">⚙️ Admin Only</div>
+      </div>
+
+      <!-- Stat Strip -->
+      <div class="admin-stat-strip animate-in" style="animation-delay:.04s">
+        <div class="stat-card">
+          <div class="stat-icon blue">👥</div>
+          <div class="stat-value" id="sTotalEmp">—</div>
+          <div class="stat-label">Total Employees</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green">✅</div>
+          <div class="stat-value" id="sPresentToday">—</div>
+          <div class="stat-label">Present Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon yellow">⏳</div>
+          <div class="stat-value" id="sPendingLeave">—</div>
+          <div class="stat-label">Pending Leave</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange">📢</div>
+          <div class="stat-value" id="sPostsToday">—</div>
+          <div class="stat-label">Posts Today</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="admin-tabs animate-in" style="animation-delay:.08s">
+        <div class="admin-tab active" onclick="switchTab('employees', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Employees
+        </div>
+        <div class="admin-tab" onclick="switchTab('leave', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Leave Approvals
+          <span class="tab-badge" id="pendingLeaveBadge" style="display:none">0</span>
+        </div>
+        <div class="admin-tab" onclick="switchTab('attendance', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Attendance
+        </div>
+        <div class="admin-tab" onclick="switchTab('add', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Employee
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════ -->
+      <!-- TAB: EMPLOYEES                                          -->
+      <!-- ════════════════════════════════════════════════════════ -->
+      <div class="tab-panel active" id="tab-employees">
+        <div class="search-bar">
+          <input type="text" class="search-input" id="empSearch"
+            placeholder="🔍  Search by name or ID…"
+            oninput="filterEmployees()"
+            style="min-width:220px">
+          <select class="search-input" id="deptFilter" onchange="filterEmployees()" style="min-width:170px">
+            <option value="">All Departments</option>
+          </select>
+          <select class="search-input" id="statusFilter" onchange="filterEmployees()" style="min-width:130px">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="loadEmployees()">↻ Refresh</button>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Department / Role</th>
+                  <th>Leave Balance</th>
+                  <th>Last Login</th>
+                  <th>Status</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="empTableBody">
+                <tr>
+                  <td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">
+                    Loading employees…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-muted)" id="empCount"></div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════ -->
+      <!-- TAB: LEAVE APPROVALS                                    -->
+      <!-- ════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-leave">
+        <div class="search-bar">
+          <select class="search-input" id="leaveStatusFilter" onchange="loadLeaveRequests()" style="min-width:170px">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="all">All Requests</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="loadLeaveRequests()">↻ Refresh</button>
+        </div>
+        <div class="card" id="leaveApprovalList">
+          <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading…</div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════ -->
+      <!-- TAB: ATTENDANCE                                         -->
+      <!-- ════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-attendance">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+          <!-- Override Form -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Override Attendance</div>
+            </div>
+            <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">
+              Manually adjust check-in/out for any employee on any date.
+            </p>
+            <div class="form-group">
+              <label class="form-label">Employee</label>
+              <select class="form-select" id="overrideEmp"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-input" id="overrideDate">
+            </div>
+            <div class="override-form-grid">
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Check In</label>
+                <input type="time" class="form-input" id="overrideIn">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label">Check Out</label>
+                <input type="time" class="form-input" id="overrideOut">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:14px">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="overrideStatus">
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+                <option value="leave">On Leave</option>
+                <option value="holiday">Holiday</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Note (optional)</label>
+              <input type="text" class="form-input" id="overrideNote" placeholder="Reason for override…">
+            </div>
+            <button class="btn btn-primary" style="width:100%" onclick="submitOverride()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="20 6 9 17 4 12"/></svg>
+              Save Override
+            </button>
+          </div>
+
+          <!-- Today's Attendance -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Today's Attendance</div>
+              <button class="btn btn-ghost btn-sm" onclick="loadTodayAttendance()">↻</button>
+            </div>
+            <div id="todayAttendanceList">
+              <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════ -->
+      <!-- TAB: ADD EMPLOYEE                                       -->
+      <!-- ════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-add">
+        <div class="card" style="max-width:580px">
+          <div class="card-header">
+            <div class="card-title">New Employee Account</div>
+          </div>
+
+          <div class="add-form-grid">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Full Name *</label>
+              <input type="text" class="form-input" id="newName" placeholder="e.g. Arjun Sharma">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Employee ID *</label>
+              <input type="text" class="form-input" id="newEmpId" placeholder="e.g. TS004">
+            </div>
+          </div>
+
+          <div class="add-form-grid" style="margin-top:14px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Department</label>
+              <input type="text" class="form-input" id="newDept" placeholder="e.g. Engineering">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Designation</label>
+              <input type="text" class="form-input" id="newDesig" placeholder="e.g. Frontend Developer">
+            </div>
+          </div>
+
+          <div class="add-form-grid" style="margin-top:14px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-input" id="newEmail" placeholder="name@company.com">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Phone</label>
+              <input type="tel" class="form-input" id="newPhone" placeholder="+91 98765 43210">
+            </div>
+          </div>
+
+          <div class="add-form-grid" style="margin-top:14px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Join Date</label>
+              <input type="date" class="form-input" id="newJoinDate">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Role</label>
+              <select class="form-select" id="newRole">
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="add-form-grid" style="margin-top:14px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Casual Leave (CL)</label>
+              <input type="number" class="form-input" id="newCL" value="12" min="0" max="365">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Sick Leave (SL)</label>
+              <input type="number" class="form-input" id="newSL" value="12" min="0" max="365">
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="form-group" style="margin-bottom:20px">
+            <label class="form-label">Temporary Password *</label>
+            <input type="text" class="form-input" id="newPass" placeholder="Employee will use this to first log in">
+          </div>
+
+          <button class="btn btn-primary btn-lg" style="width:100%" onclick="addEmployee()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Employee Account
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- ── Edit Employee Modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header-row">
+      <div class="emp-avatar" id="editModalAvatar">??</div>
+      <div>
+        <div class="modal-title" style="margin-bottom:2px">Edit Employee</div>
+        <div class="modal-subtitle" id="editModalSubtitle" style="margin-bottom:0">Update employee details</div>
+      </div>
+    </div>
+    <input type="hidden" id="editEmpId">
+
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" class="form-input" id="editName">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Department</label>
+        <input type="text" class="form-input" id="editDept">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Designation</label>
+        <input type="text" class="form-input" id="editDesig">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">CL Balance</label>
+        <input type="number" class="form-input" id="editCL" min="0">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">SL Balance</label>
+        <input type="number" class="form-input" id="editSL" min="0">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:14px">
+      <label class="form-label">Account Status</label>
+      <select class="form-select" id="editStatus">
+        <option value="active">Active</option>
+        <option value="inactive">Inactive (Deactivated)</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  const user = Auth.requireAdmin();
+  if (!user) throw new Error('Admin access required');
+
+  let allEmployees = [];
+
+  buildSidebar('admin');
+  buildTopbar('Admin Center');
+  loadAdminStats();
+  loadEmployees();
+
+  // ── Tab Switcher ───────────────────────────────────────────────
+  function switchTab(name, el) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+    if (name === 'leave')      loadLeaveRequests();
+    if (name === 'attendance') { loadTodayAttendance(); setDefaultOverrideDate(); }
+  }
+
+  // ── Admin Stats ────────────────────────────────────────────────
+  async function loadAdminStats() {
+    const res = await API.get('/admin/stats');
+    if (!res.ok) return;
+    const d = res.data;
+    document.getElementById('sTotalEmp').textContent    = d.total_employees ?? '—';
+    document.getElementById('sPresentToday').textContent = d.present_today   ?? '—';
+    document.getElementById('sPendingLeave').textContent = d.pending_leave   ?? '—';
+    document.getElementById('sPostsToday').textContent   = d.posts_today     ?? '—';
+
+    // Show pending badge on Leave tab
+    if (d.pending_leave > 0) {
+      const badge = document.getElementById('pendingLeaveBadge');
+      badge.textContent = d.pending_leave;
+      badge.style.display = 'inline-block';
+    }
+  }
+
+  // ── Load Employees ─────────────────────────────────────────────
+  async function loadEmployees() {
+    document.getElementById('empTableBody').innerHTML =
+      `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Loading…</td></tr>`;
+
+    const res = await API.get('/admin/employees');
+    allEmployees = res.ok ? (res.data.employees || []) : [];
+
+    // Populate department filter
+    const depts = [...new Set(allEmployees.map(e => e.department).filter(Boolean))].sort();
+    document.getElementById('deptFilter').innerHTML =
+      `<option value="">All Departments</option>` +
+      depts.map(d => `<option value="${d}">${d}</option>`).join('');
+
+    // Populate override employee dropdown
+    document.getElementById('overrideEmp').innerHTML =
+      allEmployees.map(e => `<option value="${e.id}">${e.name} (${e.employee_id})</option>`).join('');
+
+    filterEmployees();
+  }
+
+  function filterEmployees() {
+    const q      = document.getElementById('empSearch').value.toLowerCase();
+    const dept   = document.getElementById('deptFilter').value;
+    const status = document.getElementById('statusFilter').value;
+
+    const filtered = allEmployees.filter(e => {
+      const matchQ = !q || e.name?.toLowerCase().includes(q) || e.employee_id?.toLowerCase().includes(q);
+      const matchD = !dept   || e.department === dept;
+      const matchS = !status || e.status === status;
+      return matchQ && matchD && matchS;
+    });
+
+    renderEmployees(filtered);
+  }
+
+  function renderEmployees(list) {
+    const tbody = document.getElementById('empTableBody');
+    document.getElementById('empCount').textContent =
+      list.length === allEmployees.length
+        ? `${list.length} employees`
+        : `${list.length} of ${allEmployees.length} employees`;
+
+    if (!list.length) {
+      tbody.innerHTML = `
+        <tr><td colspan="6">
+          <div class="admin-empty">
+            <div class="admin-empty-icon">🔍</div>
+            <h3>No employees found</h3>
+            <p>Try adjusting your search or filters</p>
+          </div>
+        </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(e => {
+      const lastLogin = e.last_login ? Utils.timeAgo(e.last_login) : 'Never';
+      const empJson   = JSON.stringify(e).replace(/"/g, '&quot;');
+      return `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="emp-avatar">${Utils.initials(e.name)}</div>
+              <div>
+                <div class="emp-name">${e.name}</div>
+                <div class="emp-id">#${e.employee_id}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="font-size:13px;font-weight:500">${e.department || '—'}</div>
+            <div class="emp-detail">${e.designation || ''}</div>
+          </td>
+          <td>
+            <div style="font-size:12.5px">
+              <span style="color:var(--accent-2);font-weight:600">CL ${e.cl_balance ?? 12}</span>
+              <span style="color:var(--text-muted);margin:0 5px">·</span>
+              <span style="color:var(--success);font-weight:600">SL ${e.sl_balance ?? 12}</span>
+            </div>
+          </td>
+          <td><div class="emp-detail">${lastLogin}</div></td>
+          <td>
+            <span class="badge badge-${e.status === 'active' ? 'success' : 'danger'}">
+              ${e.status || 'active'}
+            </span>
+          </td>
+          <td style="text-align:right">
+            <div style="display:flex;gap:6px;justify-content:flex-end">
+              <button class="btn btn-secondary btn-sm" onclick="openEditModal(${empJson})">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmResetPassword('${e.id}', '${e.name}')">Reset PW</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Edit Modal ─────────────────────────────────────────────────
+  function openEditModal(emp) {
+    document.getElementById('editEmpId').value          = emp.id;
+    document.getElementById('editModalSubtitle').textContent = `${emp.name} · #${emp.employee_id}`;
+    document.getElementById('editModalAvatar').textContent   = Utils.initials(emp.name);
+    document.getElementById('editName').value           = emp.name        || '';
+    document.getElementById('editDept').value           = emp.department  || '';
+    document.getElementById('editDesig').value          = emp.designation || '';
+    document.getElementById('editCL').value             = emp.cl_balance  ?? 12;
+    document.getElementById('editSL').value             = emp.sl_balance  ?? 12;
+    document.getElementById('editStatus').value         = emp.status      || 'active';
+    openModal('editModal');
+  }
+
+  async function saveEmployee() {
+    const id = document.getElementById('editEmpId').value;
+    const payload = {
+      name:        document.getElementById('editName').value.trim(),
+      department:  document.getElementById('editDept').value.trim(),
+      designation: document.getElementById('editDesig').value.trim(),
+      cl_balance:  parseInt(document.getElementById('editCL').value),
+      sl_balance:  parseInt(document.getElementById('editSL').value),
+      status:      document.getElementById('editStatus').value,
+    };
+    if (!payload.name) { Toast.error('Name cannot be empty'); return; }
+    const res = await API.put(`/admin/employees/${id}`, payload);
+    if (res.ok) {
+      Toast.success('Employee updated successfully');
+      closeModal('editModal');
+      loadEmployees();
+    } else {
+      Toast.error(res.data.error || 'Update failed');
+    }
+  }
+
+  async function confirmResetPassword(id, name) {
+    const newPw = prompt(`Set new temporary password for ${name}:`);
+    if (!newPw?.trim()) return;
+    const res = await API.post(`/admin/employees/${id}/reset-password`, { password: newPw.trim() });
+    if (res.ok) Toast.success(`Password reset for ${name}`);
+    else Toast.error(res.data.error || 'Reset failed');
+  }
+
+  // ── Leave Approvals ────────────────────────────────────────────
+  async function loadLeaveRequests() {
+    const status    = document.getElementById('leaveStatusFilter').value;
+    const container = document.getElementById('leaveApprovalList');
+    container.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading…</div>`;
+
+    const res = await API.get(`/admin/leave?status=${status}`);
+    const requests = res.ok ? (res.data.requests || []) : [];
+
+    if (!requests.length) {
+      container.innerHTML = `
+        <div class="admin-empty">
+          <div class="admin-empty-icon">📋</div>
+          <h3>No ${status === 'all' ? '' : status} requests</h3>
+          <p>Nothing to show for this filter</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = requests.map(r => `
+      <div class="leave-req-row">
+        <div class="emp-avatar" style="width:36px;height:36px;font-size:11px;flex-shrink:0">
+          ${Utils.initials(r.employee_name)}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-weight:600;font-size:13.5px">${r.employee_name}</span>
+            <span class="leave-type-pill ${r.type}">${r.type === 'CL' ? 'Casual Leave' : 'Sick Leave'}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary)">
+            ${Utils.formatDate(r.from_date)} → ${Utils.formatDate(r.to_date)}
+            · <strong>${r.days} day${r.days > 1 ? 's' : ''}</strong>
+          </div>
+          ${r.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px;font-style:italic">"${r.reason}"</div>` : ''}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+            Requested ${Utils.timeAgo(r.created_at)}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+          <span class="badge badge-${r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : 'warning'}">
+            ${r.status}
+          </span>
+          ${r.status === 'pending' ? `
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-success btn-sm" onclick="actionLeave('${r.id}', 'approved')">
+                ✓ Approve
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="actionLeave('${r.id}', 'rejected')">
+                ✗ Reject
+              </button>
+            </div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function actionLeave(id, status) {
+    const label = status === 'approved' ? 'approve' : 'reject';
+    if (!confirm(`Are you sure you want to ${label} this leave request?`)) return;
+    const res = await API.put(`/admin/leave/${id}`, { status });
+    if (res.ok) {
+      Toast.success(`Leave ${status} successfully`);
+      loadLeaveRequests();
+      loadAdminStats();
+    } else {
+      Toast.error(res.data.error || 'Action failed');
+    }
+  }
+
+  // ── Attendance ─────────────────────────────────────────────────
+  function setDefaultOverrideDate() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('overrideDate').value = today;
+  }
+
+  async function loadTodayAttendance() {
+    const container = document.getElementById('todayAttendanceList');
+    container.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Loading…</div>`;
+    const res = await API.get('/admin/attendance/today');
+
+    if (!res.ok || !res.data.records?.length) {
+      container.innerHTML = `
+        <div class="admin-empty">
+          <div class="admin-empty-icon">🕐</div>
+          <h3>No records yet</h3>
+          <p>Attendance will appear here once employees check in</p>
+        </div>`;
+      return;
+    }
+
+    const records = res.data.records;
+    const present  = records.filter(r => r.status === 'present').length;
+    const absent   = records.filter(r => r.status === 'absent').length;
+    const onLeave  = records.filter(r => r.status === 'leave').length;
+
+    container.innerHTML = `
+      <div style="display:flex;gap:12px;margin-bottom:16px">
+        <div style="flex:1;text-align:center;padding:10px;background:var(--success-soft);border-radius:var(--radius-sm)">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--success)">${present}</div>
+          <div style="font-size:10.5px;color:var(--success);font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Present</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:10px;background:var(--danger-soft);border-radius:var(--radius-sm)">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--danger)">${absent}</div>
+          <div style="font-size:10.5px;color:var(--danger);font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Absent</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:10px;background:var(--warning-soft);border-radius:var(--radius-sm)">
+          <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--warning)">${onLeave}</div>
+          <div style="font-size:10.5px;color:var(--warning);font-weight:600;text-transform:uppercase;letter-spacing:0.06em">On Leave</div>
+        </div>
+      </div>
+      <div style="max-height:380px;overflow-y:auto">
+        ${records.map(r => `
+          <div class="att-row">
+            <div class="emp-avatar" style="width:28px;height:28px;font-size:10px">${Utils.initials(r.name)}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600">${r.name}</div>
+              <div class="att-times">
+                ${r.check_in  ? '▶ ' + Utils.formatTime(r.check_in)  : ''}
+                ${r.check_out ? ' ◼ ' + Utils.formatTime(r.check_out) : ''}
+                ${!r.check_in && r.status !== 'leave' ? 'Not checked in' : ''}
+              </div>
+            </div>
+            <span class="badge badge-${r.status === 'present' ? 'success' : r.status === 'leave' ? 'warning' : 'danger'}" style="font-size:10px">
+              ${r.status}
+            </span>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  async function submitOverride() {
+    const payload = {
+      employee_id: document.getElementById('overrideEmp').value,
+      date:        document.getElementById('overrideDate').value,
+      check_in:    document.getElementById('overrideIn').value,
+      check_out:   document.getElementById('overrideOut').value,
+      status:      document.getElementById('overrideStatus').value,
+      note:        document.getElementById('overrideNote').value,
+    };
+    if (!payload.employee_id) { Toast.error('Please select an employee'); return; }
+    if (!payload.date)        { Toast.error('Please select a date'); return; }
+
+    const res = await API.post('/admin/attendance/override', payload);
+    if (res.ok) {
+      Toast.success('Attendance record updated');
+      loadTodayAttendance();
+      // Reset time fields
+      document.getElementById('overrideIn').value  = '';
+      document.getElementById('overrideOut').value = '';
+      document.getElementById('overrideNote').value = '';
+    } else {
+      Toast.error(res.data.error || 'Override failed');
+    }
+  }
+
+  // ── Add Employee ───────────────────────────────────────────────
+  async function addEmployee() {
+    const payload = {
+      name:        document.getElementById('newName').value.trim(),
+      employee_id: document.getElementById('newEmpId').value.trim(),
+      department:  document.getElementById('newDept').value.trim(),
+      designation: document.getElementById('newDesig').value.trim(),
+      email:       document.getElementById('newEmail').value.trim(),
+      phone:       document.getElementById('newPhone').value.trim(),
+      join_date:   document.getElementById('newJoinDate').value,
+      role:        document.getElementById('newRole').value,
+      cl_balance:  parseInt(document.getElementById('newCL').value) || 12,
+      sl_balance:  parseInt(document.getElementById('newSL').value) || 12,
+      password:    document.getElementById('newPass').value,
+    };
+
+    if (!payload.name)        { Toast.error('Full name is required'); return; }
+    if (!payload.employee_id) { Toast.error('Employee ID is required'); return; }
+    if (!payload.password)    { Toast.error('Temporary password is required'); return; }
+
+    const btn = document.querySelector('#tab-add .btn-primary');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    const res = await API.post('/admin/employees', payload);
+
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Create Employee Account`;
+
+    if (res.ok) {
+      Toast.success(`${payload.name} added successfully! 🎉`);
+      // Clear form
+      ['newName','newEmpId','newDept','newDesig','newEmail','newPhone','newJoinDate','newPass']
+        .forEach(id => document.getElementById(id).value = '');
+      document.getElementById('newCL').value = 12;
+      document.getElementById('newSL').value = 12;
+      document.getElementById('newRole').value = 'employee';
+      loadEmployees();
+      loadAdminStats();
+    } else {
+      Toast.error(res.data.error || 'Failed to add employee');
+    }
+  }
+</script>
+</body>
+</html>
