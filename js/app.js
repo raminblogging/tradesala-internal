@@ -1,9 +1,9 @@
 // ─── CONFIG ────────────────────────────────────────────────────
 const CONFIG = {
   WORKER_URL: 'https://tradesala-internal.ramsrinivasants2023.workers.dev',
-  COMPANY_NAME: 'TradeSala',
+  COMPANY_NAME: 'Ramsrinivasan.in',
   COMPANY_SUBTITLE: 'Internal Portal',
-  BASE_PATH: ''
+  BASE_PATH: '/tradesala-internal'
 };
 
 // ─── AUTH ───────────────────────────────────────────────────────
