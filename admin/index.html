@@ -653,6 +653,7 @@
             <div style="display:flex;gap:6px;justify-content:flex-end">
               <button class="btn btn-secondary btn-sm" onclick="openEditModal(${empJson})">Edit</button>
               <button class="btn btn-danger btn-sm" onclick="confirmResetPassword('${e.id}', '${e.name}')">Reset PW</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmDeleteEmployee('${e.id}', '${e.name}')">Delete</button>
             </div>
           </td>
         </tr>`;
@@ -700,6 +701,17 @@
     const res = await API.post(`/admin/employees/${id}/reset-password`, { password: newPw.trim() });
     if (res.ok) Toast.success(`Password reset for ${name}`);
     else Toast.error(res.data.error || 'Reset failed');
+  }
+
+  async function confirmDeleteEmployee(id, name) {
+    if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
+    const res = await API.delete(`/admin/employees/${id}`);
+    if (res.ok) {
+      Toast.success(`${name} has been deleted`);
+      loadEmployees();
+    } else {
+      Toast.error(res.data.error || 'Delete failed');
+    }
   }
 
   // ── Leave Approvals ────────────────────────────────────────────
